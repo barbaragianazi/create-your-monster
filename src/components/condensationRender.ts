@@ -175,6 +175,8 @@ export type CondensationLayer = {
   setAmount: (layout: CondensationLayout, amount: number, enabled: boolean) => void
   /** Só atualiza um uniform do shader: não recompila nem recria nada */
   setIntensity: (intensity: number) => void
+  /** Esconde as ~14 mil microgotas (por ora, enquanto a câmera se mexe): é o que mais pesa na GPU e quase não aparece em movimento */
+  setSimplified: (simplified: boolean) => void
   dispose: () => void
 }
 
@@ -183,13 +185,18 @@ export function createCondensationLayer(): CondensationLayer {
   const microMaterial = createMaterial(intensity, 0.8, 0.6)
   const macroMaterial = createMaterial(intensity, 1, 0.55)
   const micro = createMesh(8, 2, MICRO_QUOTA, microMaterial, 'condensation-micro')
-  const macro = createMesh(14, 6, MACRO_QUOTA, macroMaterial, 'condensation-macro')
+  const macro = createMesh(10, 4, MACRO_QUOTA, macroMaterial, 'condensation-macro')
 
   const root = new Group()
   root.name = 'condensation'
   root.add(micro, macro)
 
   let currentSize = DEFAULT_CONDENSATION.size
+  let enabledNow = false
+  let simplified = false
+  const updateMicroVisibility = () => {
+    micro.visible = enabledNow && micro.count > 0 && !simplified
+  }
   let hiddenMicro: Uint8Array | null = null
   let hiddenMacro: Uint8Array | null = null
   const write = (layout: CondensationLayout) => {
@@ -229,8 +236,13 @@ export function createCondensationLayer(): CondensationLayer {
     setAmount: (layout, amount, enabled) => {
       micro.count = visibleCount(layout.micro, amount)
       macro.count = visibleCount(layout.macro, amount)
-      micro.visible = enabled && micro.count > 0
+      enabledNow = enabled
+      updateMicroVisibility()
       macro.visible = enabled && macro.count > 0
+    },
+    setSimplified: (value) => {
+      simplified = value
+      updateMicroVisibility()
     },
     setIntensity: (value) => {
       intensity.value = value

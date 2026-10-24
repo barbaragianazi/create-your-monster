@@ -18,7 +18,6 @@ import {
   type TextElementConfig,
   type TextElementDef,
   type TextElementId,
-  type TextsConfig,
 } from './canText'
 
 // Ferramenta temporária de calibração (não faz parte da UI final). x/y/rotation/fontSize são propriedades do elemento,
@@ -102,9 +101,9 @@ function ChoiceRow<T extends string | number>({
   onChange: (id: T) => void
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
       <span>{label}</span>
-      <div role="group" aria-label={`${scope}: ${label}`} className="flex gap-1">
+      <div role="group" aria-label={`${scope}: ${label}`} className="flex gap-2">
         {options.map((option) => (
           <button
             key={option.id}
@@ -113,7 +112,7 @@ function ChoiceRow<T extends string | number>({
             title={option.title}
             aria-pressed={value === option.id}
             onClick={() => onChange(option.id)}
-            className={`flex-1 rounded border px-1 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${
+            className={`flex-1 rounded border px-1 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${
               value === option.id ? BUTTON_ON : BUTTON_OFF
             }`}
           >
@@ -167,16 +166,16 @@ function FullControls({
         maxLength={40}
         onChange={(e) => onChange({ content: e.target.value })}
         aria-label={`${scope}: Texto`}
-        className="rounded border border-neutral-400 bg-white px-2 py-1"
+        className="rounded border border-neutral-400 bg-white px-2 py-1.5"
       />
 
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-2">
         Fonte
         <select
           value={style.fontFamily}
           aria-label={`${scope}: Fonte`}
           onChange={(e) => patchStyle({ fontFamily: e.target.value as FontId })}
-          className="rounded border border-neutral-400 bg-white px-2 py-1"
+          className="rounded border border-neutral-400 bg-white px-2 py-1.5"
         >
           {fontOptions.map((font) => (
             <option key={font.id} value={font.id}>
@@ -312,7 +311,7 @@ function BasicControls({
   }
 
   return (
-    <section className="flex flex-col gap-1 [overflow-wrap:anywhere] [&_input[type=range]]:min-w-0 [&_input[type=range]]:w-full">
+    <section className="flex flex-col gap-4 [overflow-wrap:anywhere] [&_input[type=range]]:min-w-0 [&_input[type=range]]:w-full">
       <div className="flex items-center justify-between gap-2">
         {showVisibility ? (
           <label className="flex items-center gap-2 font-semibold">
@@ -330,7 +329,7 @@ function BasicControls({
         maxLength={40}
         onChange={(e) => onChange({ content: e.target.value })}
         aria-label={`${scope}: Texto`}
-        className="rounded border border-neutral-400 bg-white px-2 py-1"
+        className="rounded border border-neutral-400 bg-white px-2 py-1.5"
       />
 
       <label className="flex items-center justify-between gap-2">
@@ -395,30 +394,4 @@ export function TextElementSection({
   if (!def) return null
   const Controls = def.controls === 'full' ? FullControls : BasicControls
   return <Controls def={def} config={config} onChange={onChange} showVisibility={showVisibility} />
-}
-
-export default function TextDevControls({
-  texts,
-  onChange,
-  exclude = [],
-}: {
-  texts: TextsConfig
-  onChange: (texts: TextsConfig) => void
-  /** elementos controlados em outro painel (ex.: Zero Sugar, que depende do tipo de açúcar) */
-  exclude?: readonly TextElementId[]
-}) {
-  const update = (id: TextElementId, patch: Partial<TextElementConfig>) =>
-    onChange({ ...texts, [id]: { ...texts[id], ...patch } })
-
-  return (
-    <details className="rounded-lg bg-white/80 p-3 text-sm text-neutral-800 shadow" open>
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide">Textos (dev)</summary>
-
-      <div className="mt-3 flex flex-col gap-4">
-        {TEXT_ELEMENTS.filter(({ id }) => !exclude.includes(id)).map(({ id }) => (
-          <TextElementSection key={id} id={id} config={texts[id]} onChange={(patch) => update(id, patch)} />
-        ))}
-      </div>
-    </details>
-  )
 }

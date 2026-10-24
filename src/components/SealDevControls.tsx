@@ -23,16 +23,16 @@ function Segmented<T extends string>({
   onChange: (id: T) => void
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
       <span>{label}</span>
-      <div role="group" aria-label={`Lacre: ${label}`} className="flex gap-1">
+      <div role="group" aria-label={`Lacre: ${label}`} className="flex gap-2">
         {options.map((option) => (
           <button
             key={option.id}
             type="button"
             aria-pressed={value === option.id}
             onClick={() => onChange(option.id)}
-            className={`flex-1 rounded border px-1 py-1 text-xs ${value === option.id ? BUTTON_ON : BUTTON_OFF}`}
+            className={`flex-1 rounded border px-1 py-2 text-xs ${value === option.id ? BUTTON_ON : BUTTON_OFF}`}
           >
             {option.label}
           </button>
@@ -66,7 +66,7 @@ export default function SealDevControls({
 
       {value.style === 'custom' && (
         <>
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-3 py-1">
             <input
               type="checkbox"
               checked={value.logo.enabled}

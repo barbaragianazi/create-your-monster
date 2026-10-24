@@ -94,7 +94,7 @@ function fitSize(ctx: CanvasRenderingContext2D, text: string, size: number, maxW
 
 const MIN_LABEL = 22
 
-// Áreas reservadas: a identidade Monster (e os textos da lata) é aplicada pelo Monster Lab SOBRE a arte do usuário, sempre.
+// Áreas reservadas: a identidade Monster (e os textos da lata) é aplicada pelo Create Your Monster SOBRE a arte do usuário, sempre.
 // O rótulo diz isso e nomeia o elemento; a arte pode passar por baixo, mas o que estiver aqui ficará escondido.
 function drawReserved(ctx: CanvasRenderingContext2D, layout: GuideLayout, box: GuideBox) {
   const color = box.kind === 'identity' ? COLORS.identity : COLORS.secondary

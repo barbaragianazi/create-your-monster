@@ -1,52 +1,152 @@
-import { Hand, Minus, Mouse, Plus, RotateCcw, Rotate3d, type LucideIcon } from 'lucide-react'
-import { useSyncExternalStore } from 'react'
+import { Download, Focus, Minus, MoreHorizontal, Mouse, MousePointerClick, Plus, Redo2, Rotate3d, Trash2, Undo2, type LucideIcon } from 'lucide-react'
+import { motion } from 'motion/react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useIsTouch, useLayoutMode, type LayoutMode } from './useLayoutMode'
+import { setViewInset } from './viewInset'
 
-const COARSE_POINTER = '(pointer: coarse)'
-
-function subscribeToPointerType(callback: () => void) {
-  const query = window.matchMedia(COARSE_POINTER)
-  query.addEventListener('change', callback)
-  return () => query.removeEventListener('change', callback)
-}
-
-function useIsTouch() {
-  return useSyncExternalStore(
-    subscribeToPointerType,
-    () => window.matchMedia(COARSE_POINTER).matches,
-    () => false,
+/** Botão quadrado da barra, com dica ao lado (aparece também no foco do teclado) */
+function ControlButton({
+  label,
+  shortcut,
+  icon: Icon,
+  onClick,
+  disabled = false,
+  danger = false,
+}: {
+  label: string
+  shortcut?: string
+  icon: LucideIcon
+  onClick: () => void
+  disabled?: boolean
+  danger?: boolean
+}) {
+  // aria-disabled (e não disabled) mantém o foco do teclado no botão ao atingir o limite
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        aria-label={label}
+        aria-disabled={disabled}
+        onClick={() => {
+          if (!disabled) onClick()
+        }}
+        className={`flex h-11 w-11 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${
+          disabled
+            ? 'cursor-not-allowed text-neutral-600'
+            : danger
+              ? 'text-neutral-300 hover:bg-red-600 hover:text-white'
+              : 'text-neutral-300 hover:bg-primary hover:text-black'
+        }`}
+      >
+        <Icon aria-hidden="true" size={19} strokeWidth={2} />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute right-full top-1/2 mr-3 -translate-y-1/2 translate-x-1 whitespace-nowrap bg-black px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-widest text-white opacity-0 transition-all group-has-[:focus-visible]:translate-x-0 group-has-[:focus-visible]:opacity-100 group-hover:translate-x-0 group-hover:opacity-100"
+      >
+        {label}
+        {shortcut && <span className="ml-2 text-primary">{shortcut}</span>}
+      </span>
+    </div>
   )
 }
 
-const BUTTON_CLASS =
-  'flex h-11 w-11 items-center justify-center text-neutral-800 transition-colors hover:bg-neutral-900/10 ' +
-  'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-900 ' +
-  'aria-disabled:cursor-not-allowed aria-disabled:text-neutral-400 aria-disabled:hover:bg-transparent'
-
-function ControlButton({
+/** Botão da barra compacta (celular): 48px, sem dica (no toque não há hover; o menu "mais" mostra os rótulos) */
+function CompactButton({
   label,
   icon: Icon,
   onClick,
   disabled = false,
+  expanded,
 }: {
   label: string
   icon: LucideIcon
   onClick: () => void
   disabled?: boolean
+  /** botão que abre um menu: se ele está aberto */
+  expanded?: boolean
 }) {
-  // aria-disabled (e não disabled) mantém o foco do teclado no botão ao atingir o limite
   return (
     <button
       type="button"
       aria-label={label}
-      title={label}
       aria-disabled={disabled}
+      aria-expanded={expanded}
+      aria-haspopup={expanded === undefined ? undefined : 'menu'}
       onClick={() => {
         if (!disabled) onClick()
       }}
-      className={BUTTON_CLASS}
+      className={`flex size-12 items-center justify-center transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${
+        disabled ? 'text-neutral-600' : expanded ? 'bg-primary text-black' : 'text-neutral-200 active:bg-primary active:text-black'
+      }`}
     >
       <Icon aria-hidden="true" size={20} strokeWidth={2} />
     </button>
+  )
+}
+
+function MenuItem({ icon: Icon, children, onClick, danger = false }: { icon: LucideIcon; children: ReactNode; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={`flex min-h-12 w-full items-center gap-3 px-4 text-left text-xs font-semibold uppercase tracking-widest transition-colors ${
+        danger ? 'bg-red-600 text-white' : 'text-neutral-100 active:bg-primary active:text-black'
+      }`}
+    >
+      <Icon aria-hidden="true" size={18} />
+      {children}
+    </button>
+  )
+}
+
+const Divider = () => <span aria-hidden className="mx-2 h-px bg-neutral-800" />
+
+function Hint({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
+  return (
+    <li className="flex items-center gap-2">
+      <Icon aria-hidden="true" size={14} className="text-primary" />
+      <span>{children}</span>
+    </li>
+  )
+}
+
+/** Dica de uso do mouse (no toque, quem ensina é o CoachMarks); some na primeira interação */
+function Hints({ hidden, className }: { hidden: boolean; className: string }) {
+  return (
+    <ul
+      className={`pointer-events-none absolute left-1/2 z-10 flex -translate-x-1/2 select-none flex-wrap justify-center gap-x-5 gap-y-1 border border-neutral-800 bg-black/75 px-4 py-2 text-[10px] font-medium uppercase tracking-widest text-neutral-300 transition-all duration-700 ${className} ${
+        hidden ? 'translate-y-2 opacity-0' : 'opacity-100'
+      }`}
+      style={{ clipPath: 'polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)' }}
+    >
+      <Hint icon={Rotate3d}>
+        <b className="font-semibold text-white">Arraste</b> para girar
+      </Hint>
+      <Hint icon={Mouse}>
+        <b className="font-semibold text-white">Scroll</b> para zoom
+      </Hint>
+      <Hint icon={MousePointerClick}>
+        <b className="font-semibold text-white">Clique</b> para editar
+      </Hint>
+    </ul>
+  )
+}
+
+/** Faixa de botões do celular: horizontal no topo (em pé) ou coluna à direita (deitado) */
+function CompactBar({ mode, children }: { mode: LayoutMode; children: ReactNode }) {
+  const landscape = mode === 'landscape'
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
+      className={`pointer-events-none absolute z-10 flex ${landscape ? 'top-2 flex-col items-end gap-2' : 'inset-x-2 top-2 items-start justify-between'}`}
+      style={landscape ? { right: 'max(0.5rem, env(safe-area-inset-right))' } : undefined}
+    >
+      {children}
+    </motion.div>
   )
 }
 
@@ -56,42 +156,165 @@ export default function ViewerControls({
   onReset,
   atMinZoom,
   atMaxZoom,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  onDownload,
+  onResetAll,
 }: {
   onZoomIn: () => void
   onZoomOut: () => void
   onReset: () => void
   atMinZoom: boolean
   atMaxZoom: boolean
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
+  onDownload: () => void
+  /** recomeça do zero (pede confirmação, e pode ser desfeito) */
+  onResetAll: () => void
 }) {
   const isTouch = useIsTouch()
-  const hints: { icon: LucideIcon; text: string }[] = [
-    { icon: Rotate3d, text: 'Arraste para girar' },
-    isTouch ? { icon: Hand, text: 'Pinça para zoom' } : { icon: Mouse, text: 'Scroll para zoom' },
-  ]
+  const mode = useLayoutMode()
+  const compact = mode !== 'desktop'
+
+  // Recomeçar apaga tudo: o primeiro clique só arma o botão (3 s); o segundo confirma
+  const [armed, setArmed] = useState(false)
+  const armTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(armTimer.current), [])
+  const resetAll = () => {
+    if (!armed) {
+      setArmed(true)
+      armTimer.current = window.setTimeout(() => setArmed(false), 3000)
+      return
+    }
+    window.clearTimeout(armTimer.current)
+    setArmed(false)
+    onResetAll()
+  }
+
+  // Menu "mais" da barra compacta (ações raras: baixar e recomeçar)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    window.addEventListener('pointerdown', close)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('pointerdown', close)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
+
+  // A barra compacta cobre uma faixa do palco: o enquadramento da lata a respeita
+  useEffect(() => {
+    setViewInset('toolbar', mode === 'sheet' ? { top: 56 } : mode === 'landscape' ? { right: 64 } : { right: 72 })
+    return () => setViewInset('toolbar', null)
+  }, [mode])
+
+  // A dica de uso some na primeira interação com a lata (ela já cumpriu o papel)
+  const [hintDismissed, setHintDismissed] = useState(false)
+  useEffect(() => {
+    if (hintDismissed) return
+    const dismiss = () => setHintDismissed(true)
+    window.addEventListener('pointerdown', dismiss, { once: true })
+    window.addEventListener('wheel', dismiss, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', dismiss)
+      window.removeEventListener('wheel', dismiss)
+    }
+  }, [hintDismissed])
+
+  if (compact) {
+    return (
+      <>
+        <CompactBar mode={mode}>
+          <div className={`pointer-events-auto flex border border-neutral-800 bg-neutral-950 ${mode === 'landscape' ? 'flex-col' : ''}`}>
+            <CompactButton label="Desfazer" icon={Undo2} onClick={onUndo} disabled={!canUndo} />
+            <CompactButton label="Refazer" icon={Redo2} onClick={onRedo} disabled={!canRedo} />
+          </div>
+          <div className={`pointer-events-auto flex border border-neutral-800 bg-neutral-950 ${mode === 'landscape' ? 'flex-col' : ''}`}>
+            <CompactButton label="Centralizar vista" icon={Focus} onClick={onReset} />
+            <div ref={menuRef} className="relative">
+              <CompactButton label="Mais ações" icon={MoreHorizontal} onClick={() => setMenuOpen((open) => !open)} expanded={menuOpen} />
+              {menuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Mais ações"
+                  className={`absolute z-20 w-60 border border-neutral-700 bg-black ${mode === 'landscape' ? 'right-full top-0 mr-1' : 'right-0 top-full mt-1'}`}
+                >
+                  <MenuItem
+                    icon={Download}
+                    onClick={() => {
+                      setMenuOpen(false)
+                      onDownload()
+                    }}
+                  >
+                    Baixar imagem
+                  </MenuItem>
+                  <MenuItem
+                    icon={Trash2}
+                    danger={armed}
+                    onClick={() => {
+                      resetAll()
+                      if (armed) setMenuOpen(false)
+                    }}
+                  >
+                    {armed ? 'Toque de novo para apagar tudo' : 'Recomeçar'}
+                  </MenuItem>
+                </div>
+              )}
+            </div>
+          </div>
+        </CompactBar>
+
+        {!isTouch && <Hints hidden={hintDismissed} className="top-16" />}
+      </>
+    )
+  }
 
   return (
     <>
-      {/* Coluna centralizada: o grupo fica à direita da lata, entre a lata e o painel DEV */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 mx-auto flex w-full max-w-md -translate-y-1/2 justify-end px-4">
+      {/* Barra vertical à direita, centrada na altura (como o painel à esquerda), com a borda de cima cortada na diagonal */}
+      <motion.div
+        initial={{ x: 40, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
+        className="pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 md:right-4"
+      >
         <div
-          role="group"
+          role="toolbar"
           aria-label="Controles do visualizador 3D"
-          className="pointer-events-auto flex flex-col divide-y divide-neutral-900/10 overflow-hidden rounded-xl bg-white/80 shadow"
+          aria-orientation="vertical"
+          className="pointer-events-auto flex flex-col border border-neutral-800 bg-neutral-950 py-1"
+          style={{ clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%)' }}
         >
-          <ControlButton label="Aproximar lata" icon={Plus} onClick={onZoomIn} disabled={atMinZoom} />
-          <ControlButton label="Afastar lata" icon={Minus} onClick={onZoomOut} disabled={atMaxZoom} />
-          <ControlButton label="Redefinir visualização" icon={RotateCcw} onClick={onReset} />
+          <ControlButton label="Aproximar" icon={Plus} onClick={onZoomIn} disabled={atMinZoom} />
+          <ControlButton label="Afastar" icon={Minus} onClick={onZoomOut} disabled={atMaxZoom} />
+          <ControlButton label="Centralizar vista" icon={Focus} onClick={onReset} />
+          <Divider />
+          <ControlButton label="Desfazer" shortcut="Ctrl+Z" icon={Undo2} onClick={onUndo} disabled={!canUndo} />
+          <ControlButton label="Refazer" shortcut="Ctrl+Shift+Z" icon={Redo2} onClick={onRedo} disabled={!canRedo} />
+          <Divider />
+          <ControlButton label="Baixar imagem" icon={Download} onClick={onDownload} />
+          <ControlButton
+            label={armed ? 'Clique de novo para apagar tudo' : 'Recomeçar'}
+            icon={Trash2}
+            onClick={resetAll}
+            danger={armed}
+          />
         </div>
-      </div>
+      </motion.div>
 
-      <ul className="pointer-events-none absolute inset-x-0 bottom-4 flex select-none justify-center gap-4 px-4 text-xs text-neutral-500">
-        {hints.map(({ icon: Icon, text }) => (
-          <li key={text} className="flex items-center gap-1.5">
-            <Icon aria-hidden="true" size={14} />
-            {text}
-          </li>
-        ))}
-      </ul>
+      {!isTouch && <Hints hidden={hintDismissed} className="bottom-5" />}
     </>
   )
 }

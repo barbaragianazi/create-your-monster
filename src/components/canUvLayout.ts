@@ -111,9 +111,9 @@ export function measureBodyUv(geometry: BufferGeometry, wall: UvWallModel): Body
  * Transformação u → textura. A malha cobre (uEnd − uStart) em u; ela deve ocupar exatamente `textureWidth − SEAM_GUTTER`
  * colunas, começando à direita da calha (que fica centrada em x = textureWidth / 2, a frente).
  */
-export function uvTextureTransform(layout: BodyUvLayout, textureWidth: number) {
-  const repeat = (textureWidth - SEAM_GUTTER) / (textureWidth * (layout.uEnd - layout.uStart))
-  const offset = (textureWidth + SEAM_GUTTER) / 2 / textureWidth - repeat * layout.uStart
+export function uvTextureTransform(layout: BodyUvLayout, textureWidth: number, gutter = SEAM_GUTTER) {
+  const repeat = (textureWidth - gutter) / (textureWidth * (layout.uEnd - layout.uStart))
+  const offset = (textureWidth + gutter) / 2 / textureWidth - repeat * layout.uStart
   return { repeat, offset }
 }
 
@@ -152,44 +152,52 @@ export function compositionToUv(layout: BodyUvLayout, x: number, y: number, widt
  * as bordas do canvas (atrás) caem exatamente nas bordas da textura, onde ela se repete. A arte continua nos dois lados da
  * calha (a composição é periódica), então a calha nunca mostra vazio.
  * Vertical: cada faixa recebe o scale/offset medido para a sua coluna (calha: o da cópia de costura mais próxima).
+ *
+ * `resolution` (0..1) é o tamanho do destino em relação ao tamanho pleno (a prévia, durante arrastos, usa 0,5): a calha, as faixas e
+ * as bandas encolhem junto, então a razão repeat/offset da textura (uvTextureTransform) é a mesma em qualquer resolução.
  */
-export function projectToUv(source: HTMLCanvasElement, target: HTMLCanvasElement, layout: BodyUvLayout) {
+export function projectToUv(source: HTMLCanvasElement, target: HTMLCanvasElement, layout: BodyUvLayout, resolution = 1) {
   const ctx = target.getContext('2d')
   if (!ctx) return
 
   const { width, height } = target
+  const gutter = SEAM_GUTTER * resolution
+  const stripWidth = STRIP_WIDTH * resolution
+  const edgeBand = EDGE_BAND * resolution
+  // px da origem por px do destino na vertical (1 em resolução plena)
+  const sourcePerRow = source.height / height
   const half = width / 2
-  const meshWidth = width - SEAM_GUTTER
+  const meshWidth = width - gutter
   const ratio = meshWidth / source.width
-  const meshStart = half + SEAM_GUTTER / 2
+  const meshStart = half + gutter / 2
   const span = layout.uEnd - layout.uStart
 
   ctx.clearRect(0, 0, width, height)
 
   // O deslocamento vertical deixa descobertas as pontas de cada faixa (topo e base): cobre-as com a arte sem correção,
   // que ali é só o fundo do corpo (o deslocamento é de poucos px e o UV amostra essas linhas por clamp)
-  for (const [y, bandHeight] of [[0, EDGE_BAND], [height - EDGE_BAND, EDGE_BAND]]) {
+  for (const [y, bandHeight] of [[0, edgeBand], [height - edgeBand, edgeBand]]) {
     for (const piece of [0, 1]) {
       ctx.drawImage(
         source,
-        (piece * (half - SEAM_GUTTER)) / ratio, y, half / ratio, bandHeight,
+        (piece * (half - gutter)) / ratio, y * sourcePerRow, half / ratio, bandHeight * sourcePerRow,
         piece * half, y, half, bandHeight,
       )
     }
   }
 
-  for (let x = 0; x < width; x += STRIP_WIDTH) {
-    const piece = x + STRIP_WIDTH / 2 < half ? 0 : 1
+  for (let x = 0; x < width; x += stripWidth) {
+    const piece = x + stripWidth / 2 < half ? 0 : 1
     // coluna da malha sob o centro da faixa (0 = primeira cópia da costura, meshWidth = segunda; fora disso é calha)
-    const meshColumn = piece === 0 ? x + STRIP_WIDTH / 2 + meshWidth / 2 : x + STRIP_WIDTH / 2 - meshStart
+    const meshColumn = piece === 0 ? x + stripWidth / 2 + meshWidth / 2 : x + stripWidth / 2 - meshStart
     const u = layout.uStart + (Math.min(meshWidth, Math.max(0, meshColumn)) / meshWidth) * span
     const { scale, offset } = columnAt(layout.columns, u)
 
     // origem = a mesma faixa do canvas ideal (a compressão horizontal é a inversa do destino), destino em colunas inteiras
     ctx.drawImage(
       source,
-      (x - piece * SEAM_GUTTER) / ratio, 0, STRIP_WIDTH / ratio, source.height,
-      x, offset * height, STRIP_WIDTH, scale * height,
+      (x - piece * gutter) / ratio, 0, stripWidth / ratio, source.height,
+      x, offset * height, stripWidth, scale * height,
     )
   }
 }

@@ -19,8 +19,8 @@ const SLIDERS = [
   { key: 'opacity', label: 'Opacidade', step: 0.01, format: (v: number) => v.toFixed(2) },
 ] as const
 
-const buttonClass = 'flex-1 rounded border border-neutral-400 bg-white px-2 py-1 text-xs disabled:opacity-40'
-const primaryClass = 'flex-1 rounded border border-neutral-800 bg-neutral-800 px-2 py-1 text-xs text-white disabled:opacity-50'
+const buttonClass = 'flex-1 rounded border border-neutral-400 bg-white px-2 py-2 text-xs disabled:opacity-40'
+const primaryClass = 'flex-1 rounded border border-neutral-800 bg-neutral-800 px-2 py-2 text-xs text-white disabled:opacity-50'
 
 // Ferramenta temporária (não faz parte da UI final). O gabarito reflete as configurações ATUAIS da lata.
 // Não há controle de ordem: a arte fica sempre abaixo da identidade da lata (ver canCustomArtwork).
@@ -67,10 +67,8 @@ export default function CustomArtworkDevControls({
   }
 
   return (
-    <details className="rounded-lg bg-white/80 p-3 text-sm text-neutral-800 shadow" open>
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide">Custom artwork (dev)</summary>
-
-      <div className="mt-3 flex flex-col gap-2">
+    <div>
+      <div className="flex flex-col gap-2">
         <p className="text-xs font-semibold">{CUSTOM_ARTWORK_COPY.title}</p>
         <p className="text-xs text-neutral-600">{CUSTOM_ARTWORK_COPY.description}</p>
         <p className="text-xs text-neutral-600">{CUSTOM_ARTWORK_COPY.fillAll}</p>
@@ -90,7 +88,7 @@ export default function CustomArtworkDevControls({
           }}
         />
 
-        <div className="flex gap-1">
+        <div className="flex gap-2">
           <button type="button" onClick={download} disabled={busy} className={primaryClass}>
             {busy ? 'Gerando…' : CUSTOM_ARTWORK_COPY.downloadTemplate}
           </button>
@@ -143,7 +141,7 @@ export default function CustomArtworkDevControls({
               </label>
             ))}
 
-            <div className="flex gap-1">
+            <div className="flex gap-2">
               <button type="button" onClick={() => inputRef.current?.click()} className={buttonClass}>
                 {CUSTOM_ARTWORK_COPY.replaceArtwork}
               </button>
@@ -154,6 +152,6 @@ export default function CustomArtworkDevControls({
           </>
         )}
       </div>
-    </details>
+    </div>
   )
 }

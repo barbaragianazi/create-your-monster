@@ -16,9 +16,9 @@ const SLIDERS = [
   { key: 'rotation', label: 'Rotação', ...STICKER_LIMITS.rotation, step: 1, format: (v: number) => `${Math.round(v)}°` },
 ] as const
 
-const buttonClass = 'flex-1 rounded border border-neutral-400 bg-white px-1 py-1 text-xs disabled:opacity-40'
+const buttonClass = 'flex-1 rounded border border-neutral-400 bg-white px-1 py-2 text-xs disabled:opacity-40'
 
-// Ferramenta temporária de calibração (não faz parte da UI final)
+// Controles de uma seção do painel de edição (o cabeçalho e o acordeão ficam no EditorPanel)
 export default function StickersDevControls({
   stickers,
   onChange,
@@ -87,10 +87,8 @@ export default function StickersDevControls({
   }
 
   return (
-    <details className="rounded-lg bg-white/80 p-3 text-sm text-neutral-800 shadow" open>
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide">Stickers (dev)</summary>
-
-      <div className="mt-3 flex flex-col gap-2">
+    <div>
+      <div className="flex flex-col gap-2">
         <input
           ref={inputRef}
           type="file"
@@ -121,7 +119,7 @@ export default function StickersDevControls({
         )}
 
         {stickers.length > 0 && (
-          <ul className="flex flex-col gap-1" aria-label="Stickers (o de cima fica na frente)">
+          <ul className="flex flex-col gap-2" aria-label="Stickers (o de cima fica na frente)">
             {[...stickers].reverse().map((sticker) => (
               <li key={sticker.id}>
                 <button
@@ -142,7 +140,7 @@ export default function StickersDevControls({
         )}
 
         {selected && (
-          <section className="mt-1 flex flex-col gap-1 border-t border-neutral-300 pt-2">
+          <section className="mt-3 flex flex-col gap-3 border-t border-neutral-300 pt-2">
             <label className="flex items-center gap-2 font-semibold">
               <input
                 type="checkbox"
@@ -180,7 +178,7 @@ export default function StickersDevControls({
               <span className="text-right tabular-nums">{Math.round(selected.opacity * 100)}%</span>
             </label>
 
-            <div className="flex gap-1">
+            <div className="flex gap-2">
               <button type="button" className={buttonClass} disabled={selectedIndex === stickers.length - 1} onClick={() => reorder(true)}>
                 Trazer para frente
               </button>
@@ -188,7 +186,7 @@ export default function StickersDevControls({
                 Enviar para trás
               </button>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-2">
               <button type="button" className={buttonClass} onClick={duplicate}>
                 Duplicar
               </button>
@@ -199,6 +197,6 @@ export default function StickersDevControls({
           </section>
         )}
       </div>
-    </details>
+    </div>
   )
 }

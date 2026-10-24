@@ -1,7 +1,7 @@
 import { OrbitControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useCallback, useEffect, useImperativeHandle, useRef, type ComponentRef, type Ref } from 'react'
-import { MathUtils, Raycaster, Spherical, Vector2, Vector3, type Object3D } from 'three'
+import { MathUtils, Raycaster, Spherical, Vector2, Vector3, type Object3D, type PerspectiveCamera } from 'three'
 import {
   INITIAL_CAMERA_POSITION,
   INITIAL_TARGET,
@@ -9,6 +9,7 @@ import {
   ZOOM_LIMITS,
   ZOOM_STEP,
 } from './viewerConfig'
+import { getViewInset, subscribeViewInset } from './viewInset'
 
 export type ViewApi = {
   zoomIn: () => void
@@ -25,6 +26,16 @@ const SMOOTHING = 7 // maior = transição mais rápida
 const EPSILON_DISTANCE = 0.005
 const EPSILON_ANGLE = 0.002
 const ZOOM_EDGE = 0.02
+
+// Quanto da altura da viewport a lata ocupa no enquadramento inicial (~69%) e a proporção largura/altura dela; mais uma folga.
+// Servem para encolher o enquadramento quando a interface cobre parte do palco (gaveta no celular), sem a lata encostar nas bordas.
+const CAN_FIT_HEIGHT = 0.69 + 0.12
+const CAN_ASPECT = 0.38
+const CAN_FIT_MARGIN = 0.12
+const FIT_SMOOTHING = 10
+const FIT_EPSILON = 0.0005
+
+type Fit = { fx: number; fy: number; z: number }
 
 const initialPosition = new Vector3(...INITIAL_CAMERA_POSITION)
 const initialTarget = new Vector3(...INITIAL_TARGET)
@@ -49,6 +60,7 @@ export default function CameraRig({
   const goal = useRef<Goal | null>(null)
   const camera = useThree((state) => state.camera)
   const scene = useThree((state) => state.scene)
+  const invalidate = useThree((state) => state.invalidate)
   const domElement = useThree((state) => state.gl.domElement)
 
   const currentDistance = useCallback(() => {
@@ -63,8 +75,9 @@ export default function CameraRig({
         kind: 'zoom',
         distance: MathUtils.clamp(base * factor, ZOOM_LIMITS.min, ZOOM_LIMITS.max),
       }
+      invalidate()
     },
-    [currentDistance],
+    [currentDistance, invalidate],
   )
 
   // Única função de reset: botão e duplo clique chamam esta mesma função
@@ -77,13 +90,57 @@ export default function CameraRig({
       controls.enableDamping = true
     }
     goal.current = { kind: 'reset' }
-  }, [])
+    invalidate()
+  }, [invalidate])
 
   useImperativeHandle(
     apiRef,
     () => ({ zoomIn: () => zoomBy(1 / ZOOM_STEP), zoomOut: () => zoomBy(ZOOM_STEP), reset: resetView }),
     [zoomBy, resetView],
   )
+
+  // Enquadramento na área visível: desloca (e, se preciso, encolhe) a imagem para a lata ficar centrada no que a interface não cobre.
+  // Usa o view offset da câmera (a projeção muda, a cena não), então o raycast e o overlay seguem corretos. Sem recuo, não faz nada.
+  const fit = useRef<Fit | null>(null)
+  useEffect(() => subscribeViewInset(() => invalidate()), [invalidate])
+  useFrame((state, delta) => {
+    const { width, height } = state.size
+    const perspective = camera as PerspectiveCamera
+    if (!width || !height || !perspective.isPerspectiveCamera) return
+    const inset = getViewInset()
+    const visibleWidth = Math.max(0.25, (width - inset.left - inset.right) / width)
+    const visibleHeight = Math.max(0.25, (height - inset.top - inset.bottom) / height)
+    const canWidth = CAN_FIT_HEIGHT * CAN_ASPECT * (height / width) + CAN_FIT_MARGIN
+    const target: Fit = {
+      fx: (inset.left + (width - inset.left - inset.right) / 2) / width,
+      fy: (inset.top + (height - inset.top - inset.bottom) / 2) / height,
+      z: Math.min(1, visibleHeight / CAN_FIT_HEIGHT, visibleWidth / canWidth),
+    }
+    const current = fit.current ?? { fx: 0.5, fy: 0.5, z: 1 }
+    const settled =
+      Math.abs(current.fx - target.fx) < FIT_EPSILON && Math.abs(current.fy - target.fy) < FIT_EPSILON && Math.abs(current.z - target.z) < FIT_EPSILON
+    const next: Fit = settled
+      ? target
+      : {
+          fx: MathUtils.damp(current.fx, target.fx, FIT_SMOOTHING, delta),
+          fy: MathUtils.damp(current.fy, target.fy, FIT_SMOOTHING, delta),
+          z: MathUtils.damp(current.z, target.z, FIT_SMOOTHING, delta),
+        }
+    fit.current = next
+
+    const centered = next.fx === 0.5 && next.fy === 0.5 && next.z === 1
+    if (centered) {
+      if (perspective.view?.enabled) {
+        perspective.clearViewOffset()
+        perspective.updateProjectionMatrix()
+      }
+    } else {
+      const fullWidth = width * next.z
+      const fullHeight = height * next.z
+      perspective.setViewOffset(fullWidth, fullHeight, fullWidth / 2 - next.fx * width, fullHeight / 2 - next.fy * height, width, height)
+    }
+    if (!settled) invalidate()
+  })
 
   useEffect(() => {
     const raycaster = new Raycaster()
@@ -150,6 +207,7 @@ export default function CameraRig({
     }
 
     controls.update()
+    if (goal.current) invalidate() // transição em curso: segue pedindo quadros até chegar
   })
 
   return (

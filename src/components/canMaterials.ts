@@ -4,7 +4,6 @@ import { DEFAULT_SHOULDER, type CanShoulderConfig } from './canShoulder'
 // Acabamentos PBR: para novos (satin, chrome...) basta adicionar uma entrada
 export const CAN_FINISHES = {
   metallic: { metalness: 0.85, roughness: 0.4 },
-  matte: { metalness: 0.15, roughness: 0.85 },
 } satisfies Record<string, { metalness: number; roughness: number }>
 
 export type CanFinish = keyof typeof CAN_FINISHES

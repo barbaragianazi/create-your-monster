@@ -11,7 +11,7 @@ import { resolveSugarLabel, type SugarConfig } from './canSugarLabel'
 import { stickerBaseHeight, type Sticker } from './canStickers'
 import { loadPattern, PATTERN_DEFS, type LoadedPattern, type PatternConfig } from './canPattern'
 import { drawTextElement, TEXT_ELEMENTS, type TextsConfig } from './canText'
-import { measureBodyUv, projectToUv, uvTextureTransform, IDENTITY_UV_LAYOUT, type BodyUvLayout } from './canUvLayout'
+import { measureBodyUv, projectToUv, uvTextureTransform, IDENTITY_UV_LAYOUT, SEAM_GUTTER, type BodyUvLayout } from './canUvLayout'
 import { drawWrapped } from './canWrap'
 import { createCanvas, svgToImage } from './canvasUtils'
 
@@ -87,8 +87,21 @@ function radiusAtY(y: number) {
 export const WALL_TOP_Y = CHAMFER_PROFILE[0][0]
 export const WALL_BOTTOM_Y = -1.576
 
+/*
+ * Largura da composição (a lata desenrolada). São três canvases desse tamanho (composição, UV e prévia) mais a textura na GPU com
+ * mipmaps: com 4096 são ~150 MB, o que derruba o Safari e muitos Androids de entrada. Aparelhos de toque usam 2048: a lata ocupa
+ * poucas centenas de px na tela deles, então a nitidez é a mesma a olho nu. ?texture=2048|4096 força um valor (teste).
+ * Tudo o mais (posições, escalas, gabaritos) deriva desta constante, então a arte sai igual nos dois tamanhos.
+ */
+function pickTextureWidth() {
+  if (typeof window === 'undefined') return 4096
+  const forced = Number(new URLSearchParams(window.location.search).get('texture'))
+  if (forced === 2048 || forced === 4096) return forced
+  return window.matchMedia('(pointer: coarse)').matches ? 2048 : 4096
+}
+
 // 1 px do canvas = mesmo comprimento na horizontal e na vertical (arte sem distorção)
-export const TEXTURE_WIDTH = 4096
+export const TEXTURE_WIDTH = pickTextureWidth()
 export const PX_PER_UNIT = TEXTURE_WIDTH / (2 * Math.PI * CAN_RADIUS)
 export const TEXTURE_HEIGHT = Math.round(PX_PER_UNIT / V_PER_UNIT_Y)
 
@@ -322,7 +335,14 @@ export type ArtworkTarget = {
   uvCanvas: HTMLCanvasElement
   uvLayout: BodyUvLayout
   texture: CanvasTexture
+  /** a mesma reprojeção em PREVIEW_SCALE da resolução: enviada à GPU enquanto as mudanças são rápidas (sliders, arrastos) */
+  preview: { uvCanvas: HTMLCanvasElement; texture: CanvasTexture }
 }
+
+/** Resolução da textura de prévia em relação à plena (0,5 = 1/4 dos pixels para reprojetar, subir e gerar mipmaps) */
+export const PREVIEW_SCALE = 0.5
+
+export type ArtworkQuality = 'full' | 'preview'
 
 /** UV do corpo do GLB medido na geometria carregada (só leitura; o GLB e o UV não são alterados) */
 export function measureCanBodyUv(geometry: BufferGeometry) {
@@ -336,17 +356,23 @@ export function createArtworkTarget(
 ): ArtworkTarget {
   const canvas = createCanvas(TEXTURE_WIDTH, TEXTURE_HEIGHT)
   const uvCanvas = createCanvas(TEXTURE_WIDTH, TEXTURE_HEIGHT)
+  const previewCanvas = createCanvas(Math.round(TEXTURE_WIDTH * PREVIEW_SCALE), Math.round(TEXTURE_HEIGHT * PREVIEW_SCALE))
 
-  const texture = new CanvasTexture(uvCanvas)
-  texture.flipY = false
-  texture.colorSpace = SRGBColorSpace
-  texture.wrapS = RepeatWrapping
-  const { repeat, offset } = uvTextureTransform(uvLayout, TEXTURE_WIDTH)
-  texture.repeat.x = repeat
-  texture.offset.x = offset
-  texture.anisotropy = maxAnisotropy
+  const createTexture = (source: HTMLCanvasElement, gutter: number) => {
+    const texture = new CanvasTexture(source)
+    texture.flipY = false
+    texture.colorSpace = SRGBColorSpace
+    texture.wrapS = RepeatWrapping
+    const { repeat, offset } = uvTextureTransform(uvLayout, source.width, gutter)
+    texture.repeat.x = repeat
+    texture.offset.x = offset
+    texture.anisotropy = maxAnisotropy
+    return texture
+  }
+  const texture = createTexture(uvCanvas, SEAM_GUTTER)
+  const preview = { uvCanvas: previewCanvas, texture: createTexture(previewCanvas, SEAM_GUTTER * PREVIEW_SCALE) }
 
-  const target = { canvas, uvCanvas, uvLayout, texture }
+  const target = { canvas, uvCanvas, uvLayout, texture, preview }
   paintArtwork(target, bodyFill, null, null, null, [], null, { images: {}, mEffect: null, pattern: null }, null, null)
   return target
 }
@@ -487,8 +513,19 @@ function paintIdentity(
   }
 }
 
+/** Reprojeta a composição atual para o UV do GLB e marca a textura (plena ou prévia) para subir à GPU. Não repinta a composição */
+export function presentArtwork({ canvas, uvCanvas, uvLayout, texture, preview }: ArtworkTarget, quality: ArtworkQuality = 'full') {
+  if (quality === 'preview') {
+    projectToUv(canvas, preview.uvCanvas, uvLayout, PREVIEW_SCALE)
+    preview.texture.needsUpdate = true
+  } else {
+    projectToUv(canvas, uvCanvas, uvLayout)
+    texture.needsUpdate = true
+  }
+}
+
 export function paintArtwork(
-  { canvas, uvCanvas, uvLayout, texture }: ArtworkTarget,
+  target: ArtworkTarget,
   bodyFill: BodyFill,
   shoulderColor: string | null,
   pattern: PatternConfig | null,
@@ -498,7 +535,9 @@ export function paintArtwork(
   loaded: LoadedArtwork,
   texts: TextsConfig | null,
   sugar: SugarConfig | null,
+  quality: ArtworkQuality = 'full',
 ) {
+  const { canvas } = target
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
@@ -506,11 +545,12 @@ export function paintArtwork(
   paintIdentity(ctx, artwork, loaded, texts, sugar)
   paintStickers(ctx, stickers)
 
-  projectToUv(canvas, uvCanvas, uvLayout)
-  texture.needsUpdate = true
+  presentArtwork(target, quality)
 }
 
 export function applyArtworkTexture(material: MeshStandardMaterial, texture: CanvasTexture) {
+  // trocar de textura (plena ↔ prévia) não muda o programa do shader: só a primeira vez, quando passa a existir um map, recompila
+  const hadMap = material.map !== null
   material.map = texture
-  material.needsUpdate = true
+  if (!hadMap) material.needsUpdate = true
 }

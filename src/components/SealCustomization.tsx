@@ -1,3 +1,4 @@
+import { useThree } from '@react-three/fiber'
 import { useEffect, useMemo } from 'react'
 import type { Object3D } from 'three'
 import { findPartMesh } from './canModel'
@@ -17,6 +18,7 @@ export default function SealCustomization({
   sealColor: string
   customization: SealCustomizationConfig
 }) {
+  const invalidate = useThree((state) => state.invalidate)
   const layer = useMemo(() => {
     const seal = findPartMesh(scene, 'seal')
     const parts = seal ? getSealParts(scene) : null
@@ -30,13 +32,15 @@ export default function SealCustomization({
     if (!layer) return
     let cancelled = false
     loadLogoMask().then((mask) => {
-      if (!cancelled) layer.setLogoMask(mask)
+      if (cancelled) return
+      layer.setLogoMask(mask)
+      invalidate()
     })
     return () => {
       cancelled = true
       layer.dispose()
     }
-  }, [layer])
+  }, [layer, invalidate])
 
   useEffect(() => {
     layer?.setVisible(customization.style === 'custom', customization.logo.enabled)

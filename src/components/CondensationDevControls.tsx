@@ -13,7 +13,7 @@ const SLIDERS = [
   { key: 'intensity', label: 'Intensidade', min: 0, max: 1, step: 0.01, format: (v: number) => v.toFixed(2) },
 ] as const
 
-// Ferramenta temporária de calibração (não faz parte da UI final)
+// Controles de uma seção do painel de edição (o cabeçalho e o acordeão ficam no EditorPanel)
 export default function CondensationDevControls({
   condensation,
   onChange,
@@ -24,10 +24,8 @@ export default function CondensationDevControls({
   const update = (patch: Partial<CondensationConfig>) => onChange({ ...condensation, ...patch })
 
   return (
-    <details className="rounded-lg bg-white/80 p-3 text-sm text-neutral-800 shadow" open>
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide">Condensação (dev)</summary>
-
-      <div className="mt-3 flex flex-col gap-2">
+    <div>
+      <div className="flex flex-col gap-2">
         <label className="flex items-center gap-2 font-semibold">
           <input type="checkbox" checked={condensation.enabled} onChange={(e) => update({ enabled: e.target.checked })} />
           Ativar condensação
@@ -49,6 +47,6 @@ export default function CondensationDevControls({
           </label>
         ))}
       </div>
-    </details>
+    </div>
   )
 }

@@ -1,10 +1,4 @@
-import type { CanShoulderConfig, ShoulderFinish } from './canShoulder'
-
-const FINISH_OPTIONS: { finish: ShoulderFinish; label: string }[] = [
-  { finish: 'inherit', label: 'Mesmo da lata' },
-  { finish: 'metallic', label: 'Metálico' },
-  { finish: 'matte', label: 'Fosco' },
-]
+import type { CanShoulderConfig } from './canShoulder'
 
 // Ferramenta temporária de calibração (não faz parte da UI final)
 export default function ShoulderDevControls({
@@ -32,25 +26,6 @@ export default function ShoulderDevControls({
           <input type="color" value={shoulder.color} onChange={(e) => onChange({ color: e.target.value })} />
         </label>
       )}
-
-      <div className="flex flex-col gap-1">
-        <span>Acabamento</span>
-        <div className="flex gap-1">
-          {FINISH_OPTIONS.map(({ finish, label }) => (
-            <button
-              key={finish}
-              type="button"
-              onClick={() => onChange({ finish })}
-              aria-pressed={shoulder.finish === finish}
-              className={`flex-1 rounded border px-1 py-1 leading-tight ${
-                shoulder.finish === finish ? 'border-neutral-800 bg-neutral-800 text-white' : 'border-neutral-400 bg-white'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }

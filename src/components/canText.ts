@@ -63,7 +63,7 @@ export const TEXT_ELEMENTS: readonly TextElementDef[] = [
 
 export const DEFAULT_TEXTS: TextsConfig = {
   flavor: {
-    content: 'DARK BERRY',
+    content: 'FLAVOR NAME',
     visible: true,
     x: 0,
     y: -0.96,

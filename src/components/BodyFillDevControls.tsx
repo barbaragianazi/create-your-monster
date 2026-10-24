@@ -18,16 +18,16 @@ export default function BodyFillDevControls({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <span>Preenchimento</span>
-        <div className="flex gap-1">
+        <div className="flex gap-2">
           {FILL_TYPES.map(({ type, label }) => (
             <button
               key={type}
               type="button"
               onClick={() => onChange({ type })}
               aria-pressed={fill.type === type}
-              className={`flex-1 rounded border px-2 py-1 ${
+              className={`flex-1 rounded border px-2 py-2 ${
                 fill.type === type ? 'border-neutral-800 bg-neutral-800 text-white' : 'border-neutral-400 bg-white'
               }`}
             >

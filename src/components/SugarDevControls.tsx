@@ -8,7 +8,7 @@ const SLIDERS = [
   { key: 'y', label: 'Posição Y', min: -1.6, max: 2 },
 ] as const
 
-// Ferramenta temporária de calibração (não faz parte da UI final)
+// Controles de uma seção do painel de edição (o cabeçalho e o acordeão ficam no EditorPanel)
 export default function SugarDevControls({
   sugar,
   onSugarChange,
@@ -27,18 +27,16 @@ export default function SugarDevControls({
     onTextsChange({ ...texts, zeroSugar: { ...texts.zeroSugar, ...patch } })
 
   return (
-    <details className="rounded-lg bg-white/80 p-3 text-sm text-neutral-800 shadow" open>
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide">Tipo de açúcar (dev)</summary>
-
-      <div className="mt-3 flex flex-col gap-3">
-        <div role="group" aria-label="Tipo de açúcar" className="flex gap-1">
+    <div>
+      <div className="flex flex-col gap-3">
+        <div role="group" aria-label="Tipo de açúcar" className="flex gap-2">
           {SUGAR_LABEL_OPTIONS.map(({ id, label }) => (
             <button
               key={id}
               type="button"
               onClick={() => selectType(id)}
               aria-pressed={sugar.type === id}
-              className={`flex-1 rounded border px-1 py-1 text-xs ${
+              className={`flex-1 rounded border px-1 py-2 text-xs ${
                 sugar.type === id ? 'border-neutral-800 bg-neutral-800 text-white' : 'border-neutral-400 bg-white'
               }`}
             >
@@ -52,7 +50,7 @@ export default function SugarDevControls({
         )}
 
         {sugar.type === 'high-sugar' && (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <p className="text-xs text-neutral-600">Selo oficial preto e branco: só posição e escala.</p>
             {SLIDERS.map(({ key, label, min, max }) => (
               <label key={key} className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
@@ -73,6 +71,6 @@ export default function SugarDevControls({
           </div>
         )}
       </div>
-    </details>
+    </div>
   )
 }

@@ -1,1 +1,417 @@
 @import "tailwindcss";
+
+/* Tokens no formato do tweakcn (Amber Mono 2.0: quadrado, plano, sem sombra),
+   com a paleta Monster: preto + verde neon + branco. */
+:root {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.97 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.97 0 0);
+    --primary: #80e100;
+    --primary-foreground: oklch(0.145 0 0);
+    --secondary: oklch(0.268 0.007 34.3);
+    --secondary-foreground: oklch(0.97 0 0);
+    --muted: oklch(0.216 0.006 56);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.374 0.01 67.6);
+    --accent-foreground: oklch(0.97 0 0);
+    --destructive: oklch(0.505 0.213 27.5);
+    --border: oklch(0.374 0.01 67.6);
+    --input: oklch(0.268 0.007 34.3);
+    --ring: #80e100;
+    --radius: 0rem;
+}
+
+@theme {
+    --font-monster: "Teko", sans-serif;
+    --font-sans: "Geist Mono", monospace;
+    --font-mono: "Geist Mono", monospace;
+
+    /* colors */
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    /* quadrado: zera todos os rounded-* */
+    --radius-xs: 0;
+    --radius-sm: 0;
+    --radius-md: 0;
+    --radius-lg: 0;
+    --radius-xl: 0;
+    --radius-2xl: 0;
+    --radius-3xl: 0;
+    --radius-4xl: 0;
+
+    /* plano: sem sombras suaves */
+    --shadow-xs: none;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-xl: none;
+    --shadow-2xl: none;
+}
+
+/*
+ * Conteúdo das seções do painel de edição (EditorPanel): reestiliza os controles herdados dos antigos painéis claros (sliders, botões,
+ * campos, cores). CSS fora de @layer vence as utilidades do Tailwind, então não é preciso mexer nos componentes.
+ */
+.monster-card-body {
+    color: #d4d4d4;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+}
+
+/* a barra de rolagem é do contêiner que rola (não do conteúdo): fina, verde, e sem tirar largura dos controles */
+.editor-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) #0a0a0a;
+    scrollbar-gutter: stable;
+}
+
+/* coluna do rótulo dos sliders: cabe "Espaçamento" e "Arredondamento" (antes o texto invadia o trilho) */
+.monster-card-body .grid-cols-\[4\.5rem_1fr_2\.5rem\] {
+    grid-template-columns: 6.75rem minmax(0, 1fr) 2.75rem;
+}
+
+/* o título da seção (acordeão) já diz qual elemento é */
+.monster-card-body h3 {
+    display: none;
+}
+
+.monster-card-body .font-semibold {
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 11px;
+    color: #fff;
+}
+
+.monster-card-body .text-neutral-600 {
+    color: #8a8a8a;
+}
+
+.monster-card-body .border-neutral-300,
+.monster-card-body .border-neutral-400 {
+    border-color: #3a3a3a;
+}
+
+/* botões, campos de texto e select: escuros e quadrados */
+.monster-card-body .bg-white {
+    background: #0a0a0a;
+    color: #e5e5e5;
+}
+
+.monster-card-body input[type='text'],
+.monster-card-body select {
+    border-radius: 0;
+    font-family: inherit;
+}
+
+.monster-card-body option {
+    background: #0a0a0a;
+}
+
+.monster-card-body button,
+.monster-card-body input[type='text'],
+.monster-card-body select {
+    transition: border-color 120ms, color 120ms, background-color 120ms;
+}
+
+@media (hover: hover) {
+    .monster-card-body button:not(:disabled):hover,
+    .monster-card-body input[type='text']:hover,
+    .monster-card-body select:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+}
+
+.monster-card-body input[type='text']:focus-visible,
+.monster-card-body select:focus-visible,
+.monster-card-body button:focus-visible,
+.monster-card-body input[type='range']:focus-visible,
+.monster-card-body input[type='color']:focus-visible,
+.monster-card-body input[type='checkbox']:focus-visible {
+    outline: 1px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* estado ligado (aria-pressed): verde com texto preto */
+.monster-card-body .bg-neutral-800 {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #0a0a0a;
+}
+
+@media (hover: hover) {
+    .monster-card-body button.bg-neutral-800:hover {
+        color: #0a0a0a;
+        background: #fff;
+        border-color: #fff;
+    }
+}
+
+/* valores numéricos dos sliders */
+.monster-card-body .tabular-nums {
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* slider: trilho fino cinza, alça retangular verde */
+.monster-card-body input[type='range'] {
+    appearance: none;
+    background: transparent;
+    height: 16px;
+    cursor: pointer;
+}
+
+.monster-card-body input[type='range']::-webkit-slider-runnable-track {
+    height: 2px;
+    background: #3a3a3a;
+}
+
+.monster-card-body input[type='range']::-moz-range-track {
+    height: 2px;
+    background: #3a3a3a;
+}
+
+.monster-card-body input[type='range']::-webkit-slider-thumb {
+    appearance: none;
+    width: 8px;
+    height: 14px;
+    margin-top: -6px;
+    border: 0;
+    border-radius: 0;
+    background: var(--primary);
+}
+
+.monster-card-body input[type='range']::-moz-range-thumb {
+    width: 8px;
+    height: 14px;
+    border: 0;
+    border-radius: 0;
+    background: var(--primary);
+}
+
+.monster-card-body input[type='range']:active::-webkit-slider-thumb {
+    background: #fff;
+}
+
+.monster-card-body input[type='range']:active::-moz-range-thumb {
+    background: #fff;
+}
+
+@media (hover: hover) {
+    .monster-card-body input[type='range']:hover::-webkit-slider-thumb {
+        background: #fff;
+    }
+
+    .monster-card-body input[type='range']:hover::-moz-range-thumb {
+        background: #fff;
+    }
+
+    .monster-card-body input[type='color']:hover {
+        border-color: var(--primary);
+    }
+}
+
+/* seletor de cor: amostra quadrada com borda fina */
+.monster-card-body input[type='color'] {
+    appearance: none;
+    width: 28px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid #3a3a3a;
+    border-radius: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.monster-card-body input[type='color']::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.monster-card-body input[type='color']::-webkit-color-swatch {
+    border: 0;
+    border-radius: 0;
+}
+
+.monster-card-body input[type='color']::-moz-color-swatch {
+    border: 0;
+    border-radius: 0;
+}
+
+.monster-card-body input[type='checkbox'] {
+    accent-color: var(--primary);
+}
+
+/* o cabeçalho tem o canto cortado na diagonal: o que aparece por trás dele é o fundo da página, não branco */
+html,
+body {
+    background: #0a0a0a;
+    /* o app nunca rola: sem "puxar para atualizar" nem efeito elástico, e sem o flash cinza ao tocar */
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* o palco 3D é do OrbitControls: todo gesto (arrastar, pinça) é dele, nunca da página (rolar/ampliar) */
+[data-can-stage],
+[data-can-stage] canvas {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* mãozinhas verdes (definidas em cursors.ts): agarrar no palco 3D, apontar nos controles clicáveis. Desabilitados ficam nativos */
+[data-can-stage] {
+    cursor: var(--cursor-grab, grab);
+}
+
+[data-can-stage]:active {
+    cursor: var(--cursor-grabbing, grabbing);
+}
+
+button:not(:disabled),
+a[href],
+summary,
+select,
+[role='button'],
+input[type='range'],
+input[type='color'],
+input[type='checkbox'],
+label:has(input[type='checkbox']) {
+    cursor: var(--cursor-pointer, pointer);
+}
+
+/* botões e abas respondem ao toque na hora (sem esperar o duplo toque para ampliar) */
+button,
+a,
+select,
+label,
+summary {
+    touch-action: manipulation;
+}
+
+/* a gaveta e a barra de abas ficam fora das áreas seguras do aparelho (notch, barra de gestos) */
+.safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-x {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+}
+
+/*
+ * Toque (ponteiro grosso, sem precisão): alvos de pelo menos 48px, campos com 16px (abaixo disso o Safari amplia a página ao focar),
+ * trilho e alça de slider que um dedo consegue pegar, e feedback imediato ao pressionar (não existe hover).
+ */
+@media (pointer: coarse) {
+    .monster-card-body {
+        font-size: 13px;
+    }
+
+    .monster-card-body button {
+        min-height: 48px;
+    }
+
+    .monster-card-body button:not(:disabled):active {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .monster-card-body button.bg-neutral-800:active {
+        background: #fff;
+        border-color: #fff;
+        color: #0a0a0a;
+    }
+
+    .monster-card-body input[type='text'],
+    .monster-card-body input[type='number'],
+    .monster-card-body select,
+    .monster-card-body textarea {
+        min-height: 48px;
+        font-size: 16px;
+    }
+
+    .monster-card-body input[type='range'] {
+        height: 48px;
+    }
+
+    .monster-card-body input[type='range']::-webkit-slider-runnable-track {
+        height: 4px;
+    }
+
+    .monster-card-body input[type='range']::-moz-range-track {
+        height: 4px;
+    }
+
+    .monster-card-body input[type='range']::-webkit-slider-thumb {
+        width: 16px;
+        height: 28px;
+        margin-top: -12px;
+    }
+
+    .monster-card-body input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 28px;
+    }
+
+    .monster-card-body input[type='color'] {
+        width: 52px;
+        height: 48px;
+    }
+
+    .monster-card-body input[type='checkbox'] {
+        width: 24px;
+        height: 24px;
+    }
+
+    .monster-card-body label:has(input[type='checkbox']) {
+        min-height: 48px;
+        align-items: center;
+    }
+}
+
+/* entrada da lata: sobe e aparece. Sem scale: o R3F mede o tamanho do canvas pelo getBoundingClientRect, que inclui a transformação,
+   e ficaria menor que o contêiner */
+@keyframes stage-rise {
+    from {
+        opacity: 0;
+        transform: translateY(28px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.animate-stage-rise {
+    animation: stage-rise 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 150ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-stage-rise {
+        animation: none;
+    }
+}

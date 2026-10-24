@@ -19,7 +19,7 @@ import { loadImageFile } from './canStickers'
 export const CUSTOM_ARTWORK_COPY = {
   title: 'Crie sua própria arte',
   description:
-    'Baixe o gabarito e crie sua arte no Figma, Photoshop ou outro editor. As áreas indicadas mostram onde a identidade da lata será aplicada pelo Monster Lab.',
+    'Baixe o gabarito e crie sua arte no Figma, Photoshop ou outro editor. As áreas indicadas mostram onde a identidade da lata será aplicada pelo Create Your Monster.',
   fillAll:
     'Você pode preencher todo o gabarito com sua arte. A identidade principal da lata será aplicada automaticamente sobre a composição.',
   avoidReserved:

@@ -15,7 +15,7 @@ const MODES: { mode: LayerMode; label: string }[] = [
   { mode: 'repeat', label: 'Repetir' },
 ]
 
-// Ferramenta temporária de calibração (não faz parte da UI final)
+// Controles de uma seção do painel de edição (o cabeçalho e o acordeão ficam no EditorPanel)
 export default function PatternDevControls({
   pattern,
   onChange,
@@ -36,15 +36,13 @@ export default function PatternDevControls({
   const lattice = def && pattern.mode === 'repeat' ? getPatternLattice(pattern) : null
 
   return (
-    <details className="rounded-lg bg-white/80 p-3 text-sm text-neutral-800 shadow" open>
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide">Pattern (dev)</summary>
-
-      <div className="mt-3 flex flex-col gap-2">
+    <div>
+      <div className="flex flex-col gap-2">
         <select
           value={pattern.id}
           onChange={(e) => selectPattern(e.target.value as PatternId | 'none')}
           aria-label="Pattern"
-          className="rounded border border-neutral-400 bg-white px-2 py-1"
+          className="rounded border border-neutral-400 bg-white px-2 py-1.5"
         >
           <option value="none">Nenhum</option>
           {PATTERN_IDS.map((id) => (
@@ -87,16 +85,16 @@ export default function PatternDevControls({
               </div>
             )}
 
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               <span>Modo</span>
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 {MODES.map(({ mode, label }) => (
                   <button
                     key={mode}
                     type="button"
                     onClick={() => update({ mode })}
                     aria-pressed={pattern.mode === mode}
-                    className={`flex-1 rounded border px-1 py-1 text-xs ${
+                    className={`flex-1 rounded border px-1 py-2 text-xs ${
                       pattern.mode === mode ? 'border-neutral-800 bg-neutral-800 text-white' : 'border-neutral-400 bg-white'
                     }`}
                   >
@@ -130,6 +128,6 @@ export default function PatternDevControls({
           </>
         )}
       </div>
-    </details>
+    </div>
   )
 }

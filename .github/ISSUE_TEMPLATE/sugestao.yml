@@ -1,0 +1,25 @@
+name: Sugestão de melhoria
+description: Ideia, dica ou melhoria para o Create Your Monster
+title: "[Sugestão] "
+labels: ["sugestão"]
+body:
+  - type: markdown
+    attributes:
+      value: Obrigada por ajudar o Create Your Monster a melhorar! Conte sua ideia abaixo.
+  - type: textarea
+    id: ideia
+    attributes:
+      label: Qual é a sua ideia?
+      description: Descreva o que você gostaria de ver ou mudar.
+    validations:
+      required: true
+  - type: textarea
+    id: motivo
+    attributes:
+      label: Por que isso ajudaria?
+      description: Opcional. Qual problema resolve ou o que melhora na experiência?
+  - type: textarea
+    id: referencias
+    attributes:
+      label: Referências
+      description: Opcional. Links, prints ou exemplos de onde você viu algo parecido.

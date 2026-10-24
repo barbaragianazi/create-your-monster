@@ -1,41 +1,24 @@
-import { useState } from 'react'
-import ArtworkDevControls from './components/ArtworkDevControls'
-import BodyFillDevControls from './components/BodyFillDevControls'
+import { MotionConfig } from 'motion/react'
+import { useMemo, useRef, useState } from 'react'
+import { DEFAULT_EXPORT, type ExportOptions } from './components/exportImage'
+import { DEFAULT_BACKDROP, type BackdropId } from './components/stageBackdrops'
+import { useUndoRedo } from './components/useUndoRedo'
 import type { BodyFill } from './components/canBodyFill'
 import { DEFAULT_ARTWORK, type ArtworkConfig } from './components/canArtwork'
 import { DEFAULT_CONDENSATION, type CondensationConfig } from './components/canCondensation'
 import CanViewer from './components/CanViewer'
-import CondensationDevControls from './components/CondensationDevControls'
-import CustomArtworkDevControls from './components/CustomArtworkDevControls'
+import AppHeader from './components/AppHeader'
+import EditorPanel from './components/EditorPanel'
+import { INITIAL_PANEL, locate, showGroup, type PanelState } from './components/editorNav'
 import type { CustomArtwork } from './components/canCustomArtworkLayer'
 import { DEFAULT_PATTERN, type PatternConfig } from './components/canPattern'
 import { DEFAULT_SUGAR, type SugarConfig } from './components/canSugarLabel'
 import { DEFAULT_TEXTS, type TextsConfig } from './components/canText'
 import type { Sticker } from './components/canStickers'
-import {
-  patchArtwork,
-  patchCustomArtwork,
-  patchStickers,
-  patchTexts,
-  CUSTOM_ARTWORK_ID,
-  stickerElementId,
-  stickerIdOf,
-  type ElementPatch,
-} from './components/canInteraction'
 import { useInteractiveElements } from './components/useInteractiveElements'
-import type { ArtworkElementId } from './components/canArtwork'
-import type { TextElementId } from './components/canText'
-import PatternDevControls from './components/PatternDevControls'
-import SealDevControls from './components/SealDevControls'
-import ShoulderDevControls from './components/ShoulderDevControls'
 import type { CanShoulderConfig } from './components/canShoulder'
 import { DEFAULT_SEAL_CUSTOMIZATION, type SealCustomization } from './components/sealStyle'
-import StickersDevControls from './components/StickersDevControls'
-import SugarDevControls from './components/SugarDevControls'
-import TextDevControls from './components/TextDevControls'
 import {
-  CAN_FINISHES,
-  CAN_PARTS,
   DEFAULT_CAN_CONFIG,
   type CanColorPart,
   type CanConfig,
@@ -43,9 +26,29 @@ import {
   type CanPart,
 } from './components/canMaterials'
 
-const FINISH_LABELS: Record<CanFinish, string> = {
-  metallic: 'Metálico',
-  matte: 'Fosco',
+// Tudo o que o usuário edita (e só isso: seleção e painel aberto não entram), para desfazer/refazer e recomeçar
+type EditorSnapshot = {
+  config: CanConfig
+  pattern: PatternConfig
+  customArtwork: CustomArtwork | null
+  stickers: Sticker[]
+  artwork: ArtworkConfig
+  texts: TextsConfig
+  sugar: SugarConfig
+  sealCustom: SealCustomization
+  condensation: CondensationConfig
+}
+
+const DEFAULT_SNAPSHOT: EditorSnapshot = {
+  config: DEFAULT_CAN_CONFIG,
+  pattern: DEFAULT_PATTERN,
+  customArtwork: null,
+  stickers: [],
+  artwork: DEFAULT_ARTWORK,
+  texts: DEFAULT_TEXTS,
+  sugar: DEFAULT_SUGAR,
+  sealCustom: DEFAULT_SEAL_CUSTOMIZATION,
+  condensation: DEFAULT_CONDENSATION,
 }
 
 export default function App() {
@@ -59,19 +62,51 @@ export default function App() {
   const [sealCustom, setSealCustom] = useState<SealCustomization>(DEFAULT_SEAL_CUSTOMIZATION)
   const [condensation, setCondensation] = useState<CondensationConfig>(DEFAULT_CONDENSATION)
 
-  // Manipulação direta: a seleção é única, do App, e a edição chega aos MESMOS estados que os controles DEV alteram
-  const [requestedId, setSelectedId] = useState<string | null>(null)
+  const snapshot = useMemo<EditorSnapshot>(
+    () => ({ config, pattern, customArtwork, stickers, artwork, texts, sugar, sealCustom, condensation }),
+    [config, pattern, customArtwork, stickers, artwork, texts, sugar, sealCustom, condensation],
+  )
+  const history = useUndoRedo(snapshot, (value) => {
+    setConfig(value.config)
+    setPattern(value.pattern)
+    setCustomArtwork(value.customArtwork)
+    setStickers(value.stickers)
+    setArtwork(value.artwork)
+    setTexts(value.texts)
+    setSugar(value.sugar)
+    setSealCustom(value.sealCustom)
+    setCondensation(value.condensation)
+  })
+
+  // Manipulação direta: a seleção é única, do App, e a edição chega aos MESMOS estados que o painel de edição altera
+  const [requestedId, setRequestedId] = useState<string | null>(null)
+  // grupo e seção abertos no painel de edição; a seleção de um elemento na lata abre o grupo e a seção dele
+  const [panel, setPanel] = useState<PanelState>(INITIAL_PANEL)
+  const setSelectedId = (id: string | null) => {
+    setRequestedId(id)
+    const target = id ? locate(id) : null
+    if (target) setPanel({ group: target.group, section: target.section, collapsed: false })
+  }
   const elements = useInteractiveElements(artwork, texts, sugar, stickers, customArtwork)
   // se o elemento deixou de existir (sticker excluído, arte removida), não há seleção (derivado, sem efeito)
-  const selectedElement = elements.find((element) => element.id === requestedId) ?? null
-  const selectedId = selectedElement?.id ?? null
+  const selectedId = elements.find((element) => element.id === requestedId)?.id ?? null
 
-  const changeElement = (id: string, patch: ElementPatch) => {
-    const stickerId = stickerIdOf(id)
-    if (stickerId) setStickers((prev) => patchStickers(prev, stickerId, patch))
-    else if (id === CUSTOM_ARTWORK_ID) setCustomArtwork((prev) => (prev ? patchCustomArtwork(prev, patch) : prev))
-    else if (id === 'flavor' || id === 'zeroSugar') setTexts((prev) => patchTexts(prev, id as TextElementId, patch))
-    else setArtwork((prev) => patchArtwork(prev, id as ArtworkElementId, patch))
+  // Fundo do palco e opções de exportação: preferências de saída, não edição da lata, então ficam fora do desfazer e do "recomeçar"
+  const [backdrop, setBackdrop] = useState<BackdropId>(DEFAULT_BACKDROP)
+  const [exportOptions, setExportOptions] = useState<ExportOptions>(DEFAULT_EXPORT)
+  const exportApiRef = useRef<((options: ExportOptions) => Promise<void>) | null>(null)
+  const [customImage, setCustomImage] = useState<string | null>(null)
+  const uploadBackdrop = (file: File) => {
+    setCustomImage((previous) => {
+      if (previous) URL.revokeObjectURL(previous)
+      return URL.createObjectURL(file)
+    })
+    setBackdrop('custom')
+  }
+  const backdropColors = {
+    image: customImage,
+    glow: config.body.fill.type === 'solid' ? config.body.fill.solidColor : config.body.fill.gradient.startColor,
+    floor: artwork.m.color,
   }
 
   const updateFinish = (part: CanPart, finish: CanFinish) =>
@@ -87,7 +122,12 @@ export default function App() {
     setConfig((prev) => ({ ...prev, shoulder: { ...prev.shoulder, ...patch } }))
 
   return (
-    <div className="relative">
+    // a página nunca rola: o título ocupa o que precisa e a área da lata (com o painel sobreposto) ocupa o resto
+    <MotionConfig reducedMotion="user">
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <AppHeader group={panel.group} onGroupChange={(group) => setPanel(showGroup(group))} />
+
+      <div className="relative min-h-0 flex-1">
       <CanViewer
         config={config}
         pattern={pattern}
@@ -99,91 +139,60 @@ export default function App() {
         sugar={sugar}
         sealCustom={sealCustom}
         elements={elements}
-        selectedId={selectedId}
         onSelect={setSelectedId}
-        onElementChange={changeElement}
+        onPartSelect={(part) => setPanel({ group: 'can', section: part, collapsed: false })}
+        onUndo={history.undo}
+        onRedo={history.redo}
+        canUndo={history.canUndo}
+        canRedo={history.canRedo}
+        backdrop={backdrop}
+        backdropColors={backdropColors}
+        exportOptions={exportOptions}
+        exportApiRef={exportApiRef}
+        onResetAll={() => {
+          setRequestedId(null)
+          history.replace(DEFAULT_SNAPSHOT)
+        }}
       />
 
-      {/* indicação DEV do elemento selecionado sobre a lata */}
-      {selectedElement && (
-        <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-neutral-800 shadow">
-          Selecionado: {selectedElement.label}
-        </div>
-      )}
-
-      <div className="absolute right-4 top-4 flex max-h-[calc(100dvh-2rem)] w-70 flex-col gap-2 overflow-y-auto">
-        <PatternDevControls pattern={pattern} onChange={setPattern} />
-        <StickersDevControls
-          stickers={stickers}
-          onChange={setStickers}
-          selectedId={stickerIdOf(selectedId)}
-          onSelect={(id) => setSelectedId(id ? stickerElementId(id) : null)}
-        />
-        <CustomArtworkDevControls
-          artwork={artwork}
-          texts={texts}
-          sugar={sugar}
-          customArtwork={customArtwork}
-          onChange={setCustomArtwork}
-        />
-        <ArtworkDevControls artwork={artwork} onChange={setArtwork} />
-        <SugarDevControls sugar={sugar} onSugarChange={setSugar} texts={texts} onTextsChange={setTexts} />
-        <TextDevControls texts={texts} onChange={setTexts} exclude={['zeroSugar']} />
-        <CondensationDevControls condensation={condensation} onChange={setCondensation} />
-      </div>
-
-      {/* Controles temporários apenas para teste técnico */}
-      <div className="absolute left-4 top-4 flex max-h-[calc(100dvh-2rem)] w-56 flex-col gap-4 overflow-y-auto rounded-lg bg-white/80 p-3 text-sm text-neutral-800 shadow">
-        {(Object.keys(CAN_PARTS) as CanPart[]).map((part) => (
-          <section key={part} className="flex flex-col gap-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wide">{CAN_PARTS[part].label}</h2>
-
-            {part === 'body' ? (
-              <BodyFillDevControls fill={config.body.fill} onChange={updateBodyFill} />
-            ) : (
-              <label className="flex items-center justify-between gap-4">
-                Cor
-                <input
-                  type="color"
-                  value={config[part].color}
-                  onChange={(e) => updateColor(part, e.target.value)}
-                />
-              </label>
-            )}
-
-            <div className="flex flex-col gap-1">
-              <span>Acabamento</span>
-              <div className="flex gap-1">
-                {(Object.keys(CAN_FINISHES) as CanFinish[]).map((finish) => (
-                  <button
-                    key={finish}
-                    type="button"
-                    onClick={() => updateFinish(part, finish)}
-                    aria-pressed={config[part].finish === finish}
-                    className={`flex-1 rounded border px-2 py-1 ${
-                      config[part].finish === finish
-                        ? 'border-neutral-800 bg-neutral-800 text-white'
-                        : 'border-neutral-400 bg-white'
-                    }`}
-                  >
-                    {FINISH_LABELS[finish]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {part === 'seal' && <SealDevControls value={sealCustom} sealColor={config.seal.color} onChange={setSealCustom} />}
-
-            {/* o ombro é uma região do corpo (mesmo material): fica logo abaixo dele */}
-            {part === 'body' && (
-              <div className="mt-2 flex flex-col gap-2 border-t border-neutral-300 pt-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wide">Ombro da lata</h2>
-                <ShoulderDevControls shoulder={config.shoulder} onChange={updateShoulder} />
-              </div>
-            )}
-          </section>
-        ))}
+      <EditorPanel
+        config={config}
+        onColorChange={updateColor}
+        onFinishChange={updateFinish}
+        onBodyFillChange={updateBodyFill}
+        onShoulderChange={updateShoulder}
+        pattern={pattern}
+        onPatternChange={setPattern}
+        stickers={stickers}
+        onStickersChange={setStickers}
+        customArtwork={customArtwork}
+        onCustomArtworkChange={setCustomArtwork}
+        artwork={artwork}
+        onArtworkChange={setArtwork}
+        texts={texts}
+        onTextsChange={setTexts}
+        sugar={sugar}
+        onSugarChange={setSugar}
+        sealCustom={sealCustom}
+        onSealCustomChange={setSealCustom}
+        condensation={condensation}
+        onCondensationChange={setCondensation}
+        panel={panel}
+        onPanelChange={setPanel}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        backdrop={backdrop}
+        backdropColors={backdropColors}
+        onBackdropChange={setBackdrop}
+        onCustomBackdrop={uploadBackdrop}
+        exportOptions={exportOptions}
+        onExportOptionsChange={setExportOptions}
+        onExport={async (options) => {
+          await exportApiRef.current?.(options)
+        }}
+      />
       </div>
     </div>
+    </MotionConfig>
   )
 }
