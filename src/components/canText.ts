@@ -50,7 +50,7 @@ export type TextElementDef = {
 
 // Ordem = ordem de desenho (de baixo para cima)
 export const TEXT_ELEMENTS: readonly TextElementDef[] = [
-  { id: 'flavor', label: 'Flavor Name', controls: 'full' },
+  { id: 'flavor', label: 'Flavor Name', controls: 'basic' },
   {
     id: 'zeroSugar',
     label: 'Zero Sugar',
@@ -126,8 +126,8 @@ export const DEFAULT_TEXTS: TextsConfig = {
     x: 0,
     y: 1.83,
     style: {
-      fontFamily: 'arial-narrow',
-      fontWeight: 700,
+      fontFamily: 'impact',
+      fontWeight: 400,
       fontSize: 0.12,
       color: '#8a8a8a',
       letterSpacing: 0.22,

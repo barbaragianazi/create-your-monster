@@ -33,7 +33,7 @@ export const FIRST_SECTION: Record<GroupId, string> = {
   text: TEXT_ELEMENTS.find(({ id }) => id !== 'zeroSugar')?.id ?? 'sugar',
   custom: 'pattern',
   effects: 'condensation',
-  export: 'backdrop',
+  export: 'download', // o botão de baixar já fica à vista ao abrir a aba
 }
 
 export const INITIAL_PANEL: PanelState = { group: 'can', section: FIRST_SECTION.can, collapsed: false }

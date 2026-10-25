@@ -89,7 +89,7 @@ export default function CoachMarks() {
             <Icon aria-hidden size={26} className="mt-0.5 shrink-0 text-primary" />
             <div className="min-w-0">
               <p className="font-monster text-2xl uppercase leading-none tracking-wide text-white">{title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-neutral-300 [@media(max-height:640px)]:hidden">{text}</p>
+              <p className="mt-1 text-xs leading-relaxed text-neutral-300 [@media(max-height:480px)]:hidden">{text}</p>
             </div>
           </div>
           <div className="mt-1 flex items-center justify-between">

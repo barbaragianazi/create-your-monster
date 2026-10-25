@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { animate, motion, useMotionValue } from 'motion/react'
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import EditorScroll from './EditorScroll'
 import { useParentSize } from './useParentSize'
 import { setViewInset } from './viewInset'
 
@@ -54,8 +55,13 @@ export default function BottomSheet({
 
   const available = Math.max(0, stageHeight - navHeight)
   const heights = {
-    // em telas baixas (celular pequeno) a gaveta recolhida pela metade deixa a lata aparecer
-    half: Math.round(stageHeight < 560 ? available * 0.35 : Math.min(available * 0.7, Math.max(170, stageHeight * 0.3))),
+    // em telas baixas (celular pequeno) a gaveta recolhida pela metade deixa a lata aparecer; de 600px de altura para cima ela
+    // ganha espaço para mostrar o título da seção e alguns controles sem precisar expandir
+    half: Math.round(
+      stageHeight < 560
+        ? available * 0.35
+        : Math.min(available * 0.7, Math.max(stageHeight >= 600 ? 230 : 170, stageHeight * (stageHeight >= 600 ? 0.36 : 0.3))),
+    ),
     full: Math.max(0, available - 10),
   }
 
@@ -175,7 +181,7 @@ export default function BottomSheet({
               </button>
             </div>
           </div>
-          <div className="editor-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
+          <EditorScroll>{children}</EditorScroll>
         </motion.section>
       )}
       <div ref={nav} className="pointer-events-auto border-t border-neutral-800 bg-black safe-bottom safe-x">

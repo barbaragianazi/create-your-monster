@@ -8,11 +8,13 @@ import {
   StickerError,
   type Sticker,
 } from './canStickers'
+import AdvancedAdjust from './AdvancedAdjust'
+import SliderRow from './SliderRow'
 
 const SLIDERS = [
-  { key: 'x', label: 'Posição X', ...STICKER_LIMITS.x, step: 0.01, format: (v: number) => v.toFixed(2) },
-  { key: 'y', label: 'Posição Y', ...STICKER_LIMITS.y, step: 0.01, format: (v: number) => v.toFixed(2) },
-  { key: 'scale', label: 'Escala', ...STICKER_LIMITS.scale, step: 0.01, format: (v: number) => v.toFixed(2) },
+  { key: 'x', label: 'Horizontal', ...STICKER_LIMITS.x, step: 0.01, format: (v: number) => v.toFixed(2) },
+  { key: 'y', label: 'Vertical', ...STICKER_LIMITS.y, step: 0.01, format: (v: number) => v.toFixed(2) },
+  { key: 'scale', label: 'Tamanho', ...STICKER_LIMITS.scale, step: 0.01, format: (v: number) => v.toFixed(2) },
   { key: 'rotation', label: 'Rotação', ...STICKER_LIMITS.rotation, step: 1, format: (v: number) => `${Math.round(v)}°` },
 ] as const
 
@@ -37,6 +39,19 @@ export default function StickersDevControls({
 
   const selected = stickers.find((sticker) => sticker.id === selectedId) ?? null
   const selectedIndex = selected ? stickers.indexOf(selected) : -1
+
+  const renderSlider = ({ key, label, min, max, step, format }: (typeof SLIDERS)[number], sticker: Sticker) => (
+    <SliderRow
+      key={key}
+      label={label}
+      min={min}
+      max={max}
+      step={step}
+      value={sticker[key]}
+      format={format}
+      onChange={(next) => update(sticker.id, { [key]: next })}
+    />
+  )
 
   const update = (id: string, patch: Partial<Sticker>) =>
     onChange((prev) => prev.map((sticker) => (sticker.id === id ? { ...sticker, ...patch } : sticker)))
@@ -119,7 +134,7 @@ export default function StickersDevControls({
         )}
 
         {stickers.length > 0 && (
-          <ul className="flex flex-col gap-2" aria-label="Stickers (o de cima fica na frente)">
+          <ul className="flex flex-col gap-2" aria-label="Adesivos (o de cima fica na frente)">
             {[...stickers].reverse().map((sticker) => (
               <li key={sticker.id}>
                 <button
@@ -150,33 +165,19 @@ export default function StickersDevControls({
               Visível
             </label>
 
-            {SLIDERS.map(({ key, label, min, max, step, format }) => (
-              <label key={key} className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
-                {label}
-                <input
-                  type="range"
-                  min={min}
-                  max={max}
-                  step={step}
-                  value={selected[key]}
-                  onChange={(e) => update(selected.id, { [key]: Number(e.target.value) })}
-                />
-                <span className="text-right tabular-nums">{format(selected[key])}</span>
-              </label>
-            ))}
+            {SLIDERS.filter(({ key }) => key === 'scale').map((slider) => renderSlider(slider, selected))}
 
-            <label className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
-              Opacidade
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={Math.round(selected.opacity * 100)}
-                onChange={(e) => update(selected.id, { opacity: Number(e.target.value) / 100 })}
-              />
-              <span className="text-right tabular-nums">{Math.round(selected.opacity * 100)}%</span>
-            </label>
+            <SliderRow
+              label="Opacidade"
+              min={0}
+              max={100}
+              step={1}
+              value={Math.round(selected.opacity * 100)}
+              format={(v) => `${Math.round(v)}%`}
+              onChange={(next) => update(selected.id, { opacity: next / 100 })}
+            />
+
+            <AdvancedAdjust>{SLIDERS.filter(({ key }) => key !== 'scale').map((slider) => renderSlider(slider, selected))}</AdvancedAdjust>
 
             <div className="flex gap-2">
               <button type="button" className={buttonClass} disabled={selectedIndex === stickers.length - 1} onClick={() => reorder(true)}>

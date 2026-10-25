@@ -6,11 +6,13 @@ import {
   type InnerEffect,
   type InnerEffectType,
 } from './canArtwork'
+import AdvancedAdjust from './AdvancedAdjust'
+import SliderRow from './SliderRow'
 
 const SLIDERS = [
-  { key: 'scale', label: 'Escala', ...ARTWORK_LIMITS.scale, step: 0.01, format: (v: number) => v.toFixed(2) },
-  { key: 'x', label: 'Posição X', ...ARTWORK_LIMITS.x, step: 0.01, format: (v: number) => v.toFixed(2) },
-  { key: 'y', label: 'Posição Y', ...ARTWORK_LIMITS.y, step: 0.01, format: (v: number) => v.toFixed(2) },
+  { key: 'scale', label: 'Tamanho', ...ARTWORK_LIMITS.scale, step: 0.01, format: (v: number) => v.toFixed(2) },
+  { key: 'x', label: 'Horizontal', ...ARTWORK_LIMITS.x, step: 0.01, format: (v: number) => v.toFixed(2) },
+  { key: 'y', label: 'Vertical', ...ARTWORK_LIMITS.y, step: 0.01, format: (v: number) => v.toFixed(2) },
   { key: 'rotation', label: 'Rotação', ...ARTWORK_LIMITS.rotation, step: 1, format: (v: number) => `${Math.round(v)}°` },
 ] as const
 
@@ -39,28 +41,29 @@ export function ArtworkElementSection({
 
   const { effect } = artwork.m
 
+  // elementos de identidade não podem ser ocultados, só reposicionados e recoloridos: a cor vai na mesma linha do tamanho
+  const colorInput = (
+    <input type="color" aria-label={`Cor: ${label}`} value={artwork[id].color} onChange={(e) => update({ color: e.target.value })} />
+  )
+
+  const renderSlider = ({ key, label: sliderLabel, min, max, step, format }: (typeof SLIDERS)[number]) => (
+    <SliderRow
+      key={key}
+      lead={key === 'scale' ? { label: 'Cor', control: colorInput } : undefined}
+      label={sliderLabel}
+      min={min}
+      max={max}
+      step={step}
+      value={artwork[id][key]}
+      format={format}
+      onChange={(next) => update({ [key]: next })}
+    />
+  )
+
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        {/* elementos de identidade: não podem ser ocultados, só reposicionados e recoloridos */}
-        <span className="font-semibold">{label}</span>
-        <input type="color" value={artwork[id].color} onChange={(e) => update({ color: e.target.value })} />
-      </div>
-
-      {SLIDERS.map(({ key, label: sliderLabel, min, max, step, format }) => (
-        <label key={key} className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
-          {sliderLabel}
-          <input
-            type="range"
-            min={min}
-            max={max}
-            step={step}
-            value={artwork[id][key]}
-            onChange={(e) => update({ [key]: Number(e.target.value) })}
-          />
-          <span className="text-right tabular-nums">{format(artwork[id][key])}</span>
-        </label>
-      ))}
+      {SLIDERS.filter(({ key }) => key === 'scale').map(renderSlider)}
+      <AdvancedAdjust>{SLIDERS.filter(({ key }) => key !== 'scale').map(renderSlider)}</AdvancedAdjust>
 
       {id === 'm' && (
         <div className="mt-3 flex flex-col gap-3 border-t border-neutral-300 pt-2">
@@ -81,23 +84,19 @@ export function ArtworkElementSection({
             ))}
           </div>
 
-          <label className="flex items-center justify-between gap-2">
-            Cor do efeito
-            <input type="color" value={effect.color} onChange={(e) => updateEffect({ color: e.target.value })} />
-          </label>
-
-          <label className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
-            Intensidade
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={effect.intensity}
-              onChange={(e) => updateEffect({ intensity: Number(e.target.value) })}
-            />
-            <span className="text-right tabular-nums">{effect.intensity.toFixed(2)}</span>
-          </label>
+          <SliderRow
+            lead={{
+              label: 'Cor',
+              control: (
+                <input type="color" aria-label="Cor do efeito" value={effect.color} onChange={(e) => updateEffect({ color: e.target.value })} />
+              ),
+            }}
+            label="Intensidade"
+            min={0}
+            max={1}
+            value={effect.intensity}
+            onChange={(next) => updateEffect({ intensity: next })}
+          />
         </div>
       )}
     </section>

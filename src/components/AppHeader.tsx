@@ -1,3 +1,4 @@
+import { Download } from 'lucide-react'
 import { motion } from 'motion/react'
 import { GROUPS, type GroupId } from './editorNav'
 import { useLayoutMode } from './useLayoutMode'
@@ -9,7 +10,16 @@ const SUGGEST_URL = 'https://github.com/barbaragianazi/create-your-monster/issue
  * Cabeçalho compacto: título inclinado com duas lâminas verdes, passos que espelham os grupos do painel (clicar abre o grupo) e a
  * borda de baixo cortada na diagonal. O título é um <h1>; os passos somem em telas estreitas (a coluna de ícones já navega).
  */
-export default function AppHeader({ group, onGroupChange }: { group: GroupId; onGroupChange: (group: GroupId) => void }) {
+export default function AppHeader({
+  group,
+  onGroupChange,
+  onDownload,
+}: {
+  group: GroupId
+  onGroupChange: (group: GroupId) => void
+  /** baixa a imagem com as opções de exportação atuais: a ação final do app fica sempre à vista (só no desktop; no celular o botão abre a aba Exportar) */
+  onDownload: () => void
+}) {
   // no celular o cabeçalho é mais baixo (a altura é do palco da lata) e respeita a área segura do topo
   const mode = useLayoutMode()
   const compact = mode !== 'desktop'
@@ -31,11 +41,11 @@ export default function AppHeader({ group, onGroupChange }: { group: GroupId; on
       <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary via-primary/50 to-transparent" />
 
       <div className="flex min-w-0 items-center gap-3">
-        <span aria-hidden className="flex gap-1">
+        <span aria-hidden className="flex gap-1 max-[359px]:hidden">
           <span className={`-skew-x-[14deg] bg-primary ${compact ? 'h-6' : 'h-8'} w-1.5`} />
           <span className={`-skew-x-[14deg] bg-primary/50 ${compact ? 'h-6' : 'h-8'} w-1`} />
         </span>
-        <h1 className={`-skew-x-[10deg] whitespace-nowrap font-monster font-bold uppercase leading-none tracking-wide text-white ${compact ? 'text-xl min-[400px]:text-2xl' : 'text-2xl min-[1400px]:text-4xl'}`}>
+        <h1 className={`-skew-x-[10deg] whitespace-nowrap font-monster font-bold uppercase leading-none tracking-wide text-white ${compact ? 'text-base min-[360px]:text-xl min-[400px]:text-2xl' : 'text-2xl min-[1400px]:text-4xl'}`}>
           <motion.span initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25, duration: 0.5 }} className="inline-block">
             Create your
           </motion.span>{' '}
@@ -51,7 +61,7 @@ export default function AppHeader({ group, onGroupChange }: { group: GroupId; on
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-6">
-        <nav aria-label="Etapas" className="hidden items-center gap-1 lg:flex">
+        <nav aria-label="Etapas" className="hidden items-center gap-1 min-[1600px]:flex">
           {GROUPS.map(({ id, label }, index) => {
             const active = id === group
             return (
@@ -72,6 +82,26 @@ export default function AppHeader({ group, onGroupChange }: { group: GroupId; on
             )
           })}
         </nav>
+
+        <button
+          type="button"
+          // no celular o botão abre as opções (a aba Exportar); no desktop continua baixando direto
+          onClick={compact ? () => onGroupChange('export') : onDownload}
+          aria-label={compact ? 'Exportar' : 'Baixar imagem'}
+          title={compact ? 'Exportar' : 'Baixar imagem'}
+          className={`bg-primary text-black transition-colors hover:bg-white active:bg-white ${
+            compact ? 'flex size-11 items-center justify-center' : '-skew-x-[14deg] min-h-11 px-4'
+          }`}
+        >
+          {compact ? (
+            <Download aria-hidden size={20} strokeWidth={2.25} />
+          ) : (
+            <span className="flex skew-x-[14deg] items-center gap-2 text-[11px] font-bold uppercase tracking-widest">
+              <Download aria-hidden size={16} strokeWidth={2.25} />
+              Baixar imagem
+            </span>
+          )}
+        </button>
 
         <a
           href={SUGGEST_URL}

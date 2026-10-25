@@ -8,6 +8,8 @@ import {
   type SealStyle,
 } from './sealStyle'
 
+import type { ReactNode } from 'react'
+
 const BUTTON_ON = 'border-neutral-800 bg-neutral-800 text-white'
 const BUTTON_OFF = 'border-neutral-400 bg-white'
 
@@ -16,15 +18,21 @@ function Segmented<T extends string>({
   options,
   value,
   onChange,
+  trailing,
 }: {
   label: string
   options: readonly { id: T; label: string }[]
   value: T
   onChange: (id: T) => void
+  /** controle extra na linha do rótulo (ex.: a cor manual), para não gastar uma linha só com ele */
+  trailing?: ReactNode
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <span>{label}</span>
+      <div className="flex items-center justify-between gap-4">
+        <span>{label}</span>
+        {trailing}
+      </div>
       <div role="group" aria-label={`Lacre: ${label}`} className="flex gap-2">
         {options.map((option) => (
           <button
@@ -70,10 +78,10 @@ export default function SealDevControls({
             <input
               type="checkbox"
               checked={value.logo.enabled}
-              aria-label="Lacre: Logo Monster M"
+              aria-label="Lacre: Logo"
               onChange={(e) => patchLogo({ enabled: e.target.checked })}
             />
-            Logo Monster M
+            Logo
           </label>
 
           {value.logo.enabled && (
@@ -83,22 +91,22 @@ export default function SealDevControls({
                 options={LOGO_COLOR_MODE_OPTIONS}
                 value={value.logo.colorMode}
                 onChange={(colorMode) => patchLogo({ colorMode })}
+                trailing={
+                  value.logo.colorMode === 'manual' && (
+                    <input
+                      type="color"
+                      value={value.logo.manualColor}
+                      aria-label="Lacre: Cor do M"
+                      onChange={(e) => patchLogo({ manualColor: e.target.value })}
+                    />
+                  )
+                }
               />
 
-              {value.logo.colorMode === 'auto' ? (
+              {value.logo.colorMode === 'auto' && (
                 <p className="text-xs text-neutral-600">
                   Contraste com o lacre: {autoLogoColor(sealColor) === '#000000' ? 'preto' : 'branco'}
                 </p>
-              ) : (
-                <label className="flex items-center justify-between gap-4">
-                  Cor
-                  <input
-                    type="color"
-                    value={value.logo.manualColor}
-                    aria-label="Lacre: Cor do M"
-                    onChange={(e) => patchLogo({ manualColor: e.target.value })}
-                  />
-                </label>
               )}
             </>
           )}

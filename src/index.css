@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Impact embutida: o Flavor Name e o Zero Sugar ficam iguais em qualquer dispositivo (celular não tem Impact instalada). */
+@font-face {
+    font-family: "Impact Flavor";
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url("./fonts/impact.ttf") format("truetype");
+}
 /* Tokens no formato do tweakcn (Amber Mono 2.0: quadrado, plano, sem sombra),
    com a paleta Monster: preto + verde neon + branco. */
 :root {
@@ -74,16 +82,105 @@
     letter-spacing: 0.02em;
 }
 
-/* a barra de rolagem é do contêiner que rola (não do conteúdo): fina, verde, e sem tirar largura dos controles */
+/* a barra nativa fica escondida: a barra própria (EditorScroll) é fina, verde, e mantém o cursor personalizado */
 .editor-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary) #0a0a0a;
-    scrollbar-gutter: stable;
+    scrollbar-width: none;
 }
 
-/* coluna do rótulo dos sliders: cabe "Espaçamento" e "Arredondamento" (antes o texto invadia o trilho) */
-.monster-card-body .grid-cols-\[4\.5rem_1fr_2\.5rem\] {
-    grid-template-columns: 6.75rem minmax(0, 1fr) 2.75rem;
+.editor-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.editor-track {
+    cursor: var(--cursor-pointer, default);
+}
+
+.editor-thumb {
+    margin-inline: 2px;
+    background: var(--primary);
+    cursor: var(--cursor-pointer, pointer);
+}
+
+.editor-thumb:hover,
+.editor-thumb:active {
+    background: #fff;
+}
+
+/* linha de ajuste (SliderRow): a coluna do rótulo cabe "Espaçamento" e "Arredondamento" (antes o texto invadia o trilho) */
+.monster-card-body .slider-row {
+    grid-template-columns: 5.5rem minmax(0, 1fr) 2.5rem;
+}
+
+/* botões − e + ao lado da barra */
+.monster-card-body .slider-nudge {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #3a3a3a;
+    background: #0a0a0a;
+    color: #e5e5e5;
+    touch-action: manipulation;
+}
+
+.monster-card-body .slider-nudge:disabled {
+    opacity: 0.35;
+}
+
+/*
+ * Aparelhos de toque (dedo, não mouse): campos com 16px (abaixo disso o iPhone dá zoom ao focar), alvos de 44px+ e a linha do
+ * slider em duas fileiras (rótulo e valor em cima; − barra + embaixo), longe do canto onde o polegar já fica sobre a barra de abas.
+ */
+@media (pointer: coarse) {
+    .monster-card-body input[type='text'],
+    .monster-card-body select {
+        font-size: max(16px, 1em);
+        min-height: 44px;
+    }
+
+    .monster-card-body label:has(> input[type='checkbox']) {
+        min-height: 48px;
+        gap: 0.75rem;
+    }
+
+    .monster-card-body input[type='checkbox'] {
+        flex: none;
+        width: 22px;
+        height: 22px;
+    }
+
+    .monster-card-body .slider-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        row-gap: 2px;
+    }
+
+    .monster-card-body .slider-row .slider-stepper {
+        grid-column: 1 / -1;
+        order: 3;
+        gap: 10px;
+    }
+
+    .monster-card-body .slider-nudge {
+        width: 44px;
+        height: 44px;
+    }
+
+    .monster-card-body input[type='range'] {
+        height: 32px;
+    }
+
+    .monster-card-body input[type='range']::-webkit-slider-thumb {
+        width: 14px;
+        height: 28px;
+        margin-top: -13px;
+    }
+
+    .monster-card-body input[type='range']::-moz-range-thumb {
+        width: 14px;
+        height: 28px;
+    }
 }
 
 /* o título da seção (acordeão) já diz qual elemento é */
@@ -285,6 +382,11 @@ body {
 
 [data-can-stage]:active {
     cursor: var(--cursor-grabbing, grabbing);
+}
+
+/* cursor verde em qualquer área da página (fundo, painéis, textos). Campos de texto e controles desabilitados mantêm o nativo */
+html {
+    cursor: var(--cursor-pointer, default);
 }
 
 button:not(:disabled),

@@ -41,6 +41,7 @@ const ICON_SIZE = 2.3
 const ICON_GAP = 0.5
 const BORDER = 0.16
 const ROW_SEPARATOR = 0.12
+const CORNER_RADIUS = 0.45
 const REFERENCE_ROW_HEIGHT = 2 * LINE_HEIGHT + 2 * ROW_PADDING_Y
 
 const rowHeightEm = (lines: number) => lines * LINE_HEIGHT + 2 * ROW_PADDING_Y
@@ -118,7 +119,13 @@ export function drawFrontLabel(
     const left = -totalWidth / 2
     const top = -totalHeight / 2
 
-    // fundo branco (bloco "ALTO EM") + um bloco preto por nutriente
+    // fundo branco (bloco "ALTO EM") + um bloco preto por nutriente, recortados nos cantos arredondados do selo
+    const border = BORDER * em
+    const radius = CORNER_RADIUS * em
+    ctx.save()
+    ctx.beginPath()
+    ctx.roundRect(left, top, totalWidth, totalHeight, radius)
+    ctx.clip()
     ctx.fillStyle = WHITE
     ctx.fillRect(left, top, totalWidth, totalHeight)
     ctx.fillStyle = BLACK
@@ -135,11 +142,14 @@ export function drawFrontLabel(
       ctx.fillRect(left + whiteWidth, rowTop - (ROW_SEPARATOR * em) / 2, blackWidth, ROW_SEPARATOR * em)
     })
 
-    // contorno preto (traço centrado na borda, desenhado para dentro)
-    const border = BORDER * em
+    ctx.restore()
+
+    // contorno preto (traço centrado na borda, desenhado para dentro, acompanhando o canto arredondado)
     ctx.strokeStyle = BLACK
     ctx.lineWidth = border
-    ctx.strokeRect(left + border / 2, top + border / 2, totalWidth - border, totalHeight - border)
+    ctx.beginPath()
+    ctx.roundRect(left + border / 2, top + border / 2, totalWidth - border, totalHeight - border, Math.max(0, radius - border / 2))
+    ctx.stroke()
 
     // lupa + "ALTO EM" centralizados na altura total
     drawMagnifier(ctx, left + (WHITE_PADDING_X + ICON_SIZE / 2) * em, 0, ICON_SIZE * em)

@@ -1,6 +1,7 @@
-import { Download, Focus, Minus, MoreHorizontal, Mouse, MousePointerClick, Plus, Redo2, Rotate3d, Trash2, Undo2, type LucideIcon } from 'lucide-react'
+import { Download, LocateFixed, Maximize, Minimize, Minus, Mouse, MousePointerClick, Plus, Redo2, Rotate3d, Trash2, Undo2, type LucideIcon } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useFullscreen } from './useFullscreen'
 import { useIsTouch, useLayoutMode, type LayoutMode } from './useLayoutMode'
 import { setViewInset } from './viewInset'
 
@@ -57,46 +58,28 @@ function CompactButton({
   icon: Icon,
   onClick,
   disabled = false,
-  expanded,
+  danger = false,
 }: {
   label: string
   icon: LucideIcon
   onClick: () => void
   disabled?: boolean
-  /** botão que abre um menu: se ele está aberto */
-  expanded?: boolean
+  /** ação destrutiva já armada (aguardando o segundo toque) */
+  danger?: boolean
 }) {
   return (
     <button
       type="button"
       aria-label={label}
       aria-disabled={disabled}
-      aria-expanded={expanded}
-      aria-haspopup={expanded === undefined ? undefined : 'menu'}
       onClick={() => {
         if (!disabled) onClick()
       }}
       className={`flex size-12 items-center justify-center transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${
-        disabled ? 'text-neutral-600' : expanded ? 'bg-primary text-black' : 'text-neutral-200 active:bg-primary active:text-black'
+        disabled ? 'text-neutral-600' : danger ? 'bg-red-600 text-white' : 'text-neutral-200 active:bg-primary active:text-black'
       }`}
     >
       <Icon aria-hidden="true" size={20} strokeWidth={2} />
-    </button>
-  )
-}
-
-function MenuItem({ icon: Icon, children, onClick, danger = false }: { icon: LucideIcon; children: ReactNode; onClick: () => void; danger?: boolean }) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className={`flex min-h-12 w-full items-center gap-3 px-4 text-left text-xs font-semibold uppercase tracking-widest transition-colors ${
-        danger ? 'bg-red-600 text-white' : 'text-neutral-100 active:bg-primary active:text-black'
-      }`}
-    >
-      <Icon aria-hidden="true" size={18} />
-      {children}
     </button>
   )
 }
@@ -179,6 +162,7 @@ export default function ViewerControls({
   const isTouch = useIsTouch()
   const mode = useLayoutMode()
   const compact = mode !== 'desktop'
+  const fullscreen = useFullscreen()
 
   // Recomeçar apaga tudo: o primeiro clique só arma o botão (3 s); o segundo confirma
   const [armed, setArmed] = useState(false)
@@ -194,25 +178,6 @@ export default function ViewerControls({
     setArmed(false)
     onResetAll()
   }
-
-  // Menu "mais" da barra compacta (ações raras: baixar e recomeçar)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!menuOpen) return
-    const close = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false)
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false)
-    }
-    window.addEventListener('pointerdown', close)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('pointerdown', close)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [menuOpen])
 
   // A barra compacta cobre uma faixa do palco: o enquadramento da lata a respeita
   useEffect(() => {
@@ -242,41 +207,31 @@ export default function ViewerControls({
             <CompactButton label="Refazer" icon={Redo2} onClick={onRedo} disabled={!canRedo} />
           </div>
           <div className={`pointer-events-auto flex border border-neutral-800 bg-neutral-950 ${mode === 'landscape' ? 'flex-col' : ''}`}>
-            <CompactButton label="Centralizar vista" icon={Focus} onClick={onReset} />
-            <div ref={menuRef} className="relative">
-              <CompactButton label="Mais ações" icon={MoreHorizontal} onClick={() => setMenuOpen((open) => !open)} expanded={menuOpen} />
-              {menuOpen && (
-                <div
-                  role="menu"
-                  aria-label="Mais ações"
-                  className={`absolute z-20 w-60 border border-neutral-700 bg-black ${mode === 'landscape' ? 'right-full top-0 mr-1' : 'right-0 top-full mt-1'}`}
+            <CompactButton label="Centralizar vista" icon={LocateFixed} onClick={onReset} />
+            {fullscreen.supported && (
+              <CompactButton
+                label={fullscreen.active ? 'Sair da tela cheia' : 'Tela cheia'}
+                icon={fullscreen.active ? Minimize : Maximize}
+                onClick={fullscreen.toggle}
+              />
+            )}
+            {/* Recomeçar apaga tudo: fica à vista (sem menu) e pede um segundo toque, com o aviso escrito ao lado */}
+            <div className="relative">
+              <CompactButton label={armed ? 'Toque de novo para apagar tudo' : 'Recomeçar'} icon={Trash2} onClick={resetAll} danger={armed} />
+              {armed && (
+                <p
+                  role="status"
+                  className={`pointer-events-none absolute z-20 w-60 bg-red-600 px-4 py-3 text-xs font-semibold uppercase tracking-widest text-white ${mode === 'landscape' ? 'right-full top-0 mr-1' : 'right-0 top-full mt-1'}`}
                 >
-                  <MenuItem
-                    icon={Download}
-                    onClick={() => {
-                      setMenuOpen(false)
-                      onDownload()
-                    }}
-                  >
-                    Baixar imagem
-                  </MenuItem>
-                  <MenuItem
-                    icon={Trash2}
-                    danger={armed}
-                    onClick={() => {
-                      resetAll()
-                      if (armed) setMenuOpen(false)
-                    }}
-                  >
-                    {armed ? 'Toque de novo para apagar tudo' : 'Recomeçar'}
-                  </MenuItem>
-                </div>
+                  Toque de novo para apagar tudo
+                </p>
               )}
             </div>
           </div>
         </CompactBar>
 
-        {!isTouch && <Hints hidden={hintDismissed} className="top-16" />}
+        {/* em paisagem baixa a dica cobriria a lata */}
+        {!isTouch && mode !== 'landscape' && <Hints hidden={hintDismissed} className="top-16" />}
       </>
     )
   }
@@ -299,7 +254,7 @@ export default function ViewerControls({
         >
           <ControlButton label="Aproximar" icon={Plus} onClick={onZoomIn} disabled={atMinZoom} />
           <ControlButton label="Afastar" icon={Minus} onClick={onZoomOut} disabled={atMaxZoom} />
-          <ControlButton label="Centralizar vista" icon={Focus} onClick={onReset} />
+          <ControlButton label="Centralizar vista" icon={LocateFixed} onClick={onReset} />
           <Divider />
           <ControlButton label="Desfazer" shortcut="Ctrl+Z" icon={Undo2} onClick={onUndo} disabled={!canUndo} />
           <ControlButton label="Refazer" shortcut="Ctrl+Shift+Z" icon={Redo2} onClick={onRedo} disabled={!canRedo} />

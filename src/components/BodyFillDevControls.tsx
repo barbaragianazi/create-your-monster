@@ -1,4 +1,5 @@
 import type { BodyFill, BodyFillType, BodyGradient } from './canBodyFill'
+import SliderRow from './SliderRow'
 
 const FILL_TYPES: { type: BodyFillType; label: string }[] = [
   { type: 'solid', label: 'Sólido' },
@@ -18,8 +19,9 @@ export default function BodyFillDevControls({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-2">
-        <span>Preenchimento</span>
+      {/* no toque: linha 1 = cor, linha 2 = tipo de preenchimento (o rótulo "Preenchimento" some, os botões já dizem) */}
+      <div className="flex flex-col gap-2 pointer-coarse:order-2">
+        <span className="pointer-coarse:sr-only">Preenchimento</span>
         <div className="flex gap-2">
           {FILL_TYPES.map(({ type, label }) => (
             <button
@@ -38,40 +40,39 @@ export default function BodyFillDevControls({
       </div>
 
       {fill.type === 'solid' ? (
-        <label className="flex items-center justify-between gap-4">
+        <label className="flex items-center justify-between gap-4 pointer-coarse:order-1">
           Cor
           <input type="color" value={fill.solidColor} onChange={(e) => onChange({ solidColor: e.target.value })} />
         </label>
       ) : (
         <>
-          <label className="flex items-center justify-between gap-4">
-            Cor inicial
-            <input
-              type="color"
-              value={gradient.startColor}
-              onChange={(e) => updateGradient({ startColor: e.target.value })}
-            />
-          </label>
-          <label className="flex items-center justify-between gap-4">
-            Cor final
-            <input
-              type="color"
-              value={gradient.endColor}
-              onChange={(e) => updateGradient({ endColor: e.target.value })}
-            />
-          </label>
-          <label className="grid grid-cols-[3.5rem_1fr_2.5rem] items-center gap-2">
-            Direção
-            <input
-              type="range"
-              min={0}
-              max={360}
-              step={1}
-              value={gradient.angle}
-              onChange={(e) => updateGradient({ angle: Number(e.target.value) })}
-            />
-            <span className="text-right tabular-nums">{gradient.angle}°</span>
-          </label>
+          <div className="flex items-center justify-between gap-4 pointer-coarse:order-1">
+            <label className="flex items-center gap-2">
+              Início
+              <input
+                type="color"
+                value={gradient.startColor}
+                onChange={(e) => updateGradient({ startColor: e.target.value })}
+              />
+            </label>
+            <label className="flex items-center gap-2">
+              Fim
+              <input
+                type="color"
+                value={gradient.endColor}
+                onChange={(e) => updateGradient({ endColor: e.target.value })}
+              />
+            </label>
+          </div>
+          <SliderRow
+            label="Direção"
+            min={0}
+            max={360}
+            step={1}
+            value={gradient.angle}
+            format={(v) => `${v}°`}
+            onChange={(next) => updateGradient({ angle: next })}
+          />
         </>
       )}
     </div>

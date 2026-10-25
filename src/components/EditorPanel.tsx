@@ -1,8 +1,9 @@
 import { ChevronDown, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { createContext, useContext, useEffect, useRef, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { createContext, useContext, useEffect, useRef, type CSSProperties, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import BottomSheet from './BottomSheet'
-import { useLayoutMode } from './useLayoutMode'
+import EditorScroll from './EditorScroll'
+import { useIsTouch, useLayoutMode } from './useLayoutMode'
 import { useParentSize } from './useParentSize'
 import { setViewInset } from './viewInset'
 import { ArtworkElementSection } from './ArtworkDevControls'
@@ -21,9 +22,9 @@ import {
   type CanFinish,
   type CanPart,
 } from './canMaterials'
-import type { PatternConfig } from './canPattern'
+import { PATTERN_DEFS, type PatternConfig } from './canPattern'
 import type { Sticker } from './canStickers'
-import type { SugarConfig } from './canSugarLabel'
+import { SUGAR_LABEL_OPTIONS, type SugarConfig } from './canSugarLabel'
 import { TEXT_ELEMENTS, type TextElementConfig, type TextElementId, type TextsConfig } from './canText'
 import { FIRST_SECTION, GROUPS, locate, type GroupId, type PanelState } from './editorNav'
 import { EXPORT_FORMATS, type ExportOptions } from './exportImage'
@@ -59,10 +60,13 @@ function Section({
   active,
   open,
   onToggle,
+  bare = false,
   children,
 }: {
   id: string
   title: string
+  /** grupo de uma seção só: o título da seção repetiria o do painel, então o conteúdo aparece direto, sem a barra de título */
+  bare?: boolean
   /** resumo mostrado com a seção fechada (uma amostra de cor, uma contagem...) */
   summary?: ReactNode
   /** o elemento selecionado na lata é o desta seção */
@@ -75,10 +79,18 @@ function Section({
   const compact = useContext(CompactContext)
   // espera a animação de abertura terminar para rolar até o fim da seção (a altura ainda está crescendo antes disso)
   useEffect(() => {
-    if (!open) return
+    if (!open || bare) return
     const timer = window.setTimeout(() => ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 240)
     return () => window.clearTimeout(timer)
-  }, [open])
+  }, [open, bare])
+
+  if (bare) {
+    return (
+      <section ref={ref} aria-label={title}>
+        <div className={`monster-card-body bg-neutral-950 py-4 ${compact ? 'px-4' : 'px-6'}`}><div className="flex flex-col gap-5">{children}</div></div>
+      </section>
+    )
+  }
 
   return (
     <section ref={ref} className="border-b border-black">
@@ -98,7 +110,7 @@ function Section({
         >
           <span aria-hidden className={`size-1.5 shrink-0 ${active ? 'bg-primary' : 'bg-transparent'}`} />
           <span className="flex-1 truncate">{title}</span>
-          {!open && summary !== undefined && <span className="shrink-0 font-normal normal-case tracking-normal text-neutral-300">{summary}</span>}
+          {!open && summary !== undefined && <span className="max-w-[42%] shrink-0 truncate font-normal normal-case tracking-normal text-neutral-300">{summary}</span>}
           <span aria-hidden className={`flex size-6 shrink-0 items-center justify-center border ${open ? 'border-primary/60' : 'border-neutral-500'}`}>
             <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
           </span>
@@ -131,7 +143,11 @@ const SIDE = {
 // a partir desta largura de palco, o desktop deixa a lata centrada (o painel flutua sobre a parte esquerda, como sempre foi)
 const WIDE_STAGE = 1180
 
-const swatch = (color: string) => <span aria-hidden className="block h-3 w-5 border border-neutral-600" style={{ background: color }} />
+const swatch = (background: string) => <span aria-hidden className="block h-3 w-5 border border-neutral-600" style={{ background }} />
+
+// o corpo (e o ombro que o acompanha) pode ser sólido ou degradê: a amostra mostra o que está valendo
+const bodyFillBackground = ({ type, solidColor, gradient }: BodyFill) =>
+  type === 'solid' ? solidColor : `linear-gradient(${gradient.angle}deg, ${gradient.startColor}, ${gradient.endColor})`
 
 export default function EditorPanel({
   config,
@@ -251,11 +267,13 @@ export default function EditorPanel({
   const content: Record<GroupId, ReactNode> = {
     can: (
       <>
-        <Section {...sectionProps('body')} title={CAN_PARTS.body.label}>
+        <Section {...sectionProps('body')} title={CAN_PARTS.body.label} summary={swatch(bodyFillBackground(config.body.fill))}>
           <BodyFillDevControls fill={config.body.fill} onChange={onBodyFillChange} />
           {finishPicker('body')}
         </Section>
-        <Section {...sectionProps('shoulder')} title="Ombro da lata">
+        <Section {...sectionProps('shoulder')} title="Ombro da lata"
+          summary={swatch(config.shoulder.inheritBodyColor ? bodyFillBackground(config.body.fill) : config.shoulder.color)}
+        >
           <ShoulderDevControls shoulder={config.shoulder} onChange={onShoulderChange} />
         </Section>
         {colorPart('top')}
@@ -285,17 +303,17 @@ export default function EditorPanel({
           </Section>
         ))}
         {/* o Zero Sugar não tem visibilidade própria: depende do tipo de açúcar, então os controles dele ficam aqui */}
-        <Section {...sectionProps('sugar')} title="Tipo de açúcar" summary={sugar.type}>
+        <Section {...sectionProps('sugar')} title="Selo de açúcar" summary={SUGAR_LABEL_OPTIONS.find(({ id }) => id === sugar.type)?.label}>
           <SugarDevControls sugar={sugar} onSugarChange={onSugarChange} texts={texts} onTextsChange={onTextsChange} />
         </Section>
       </>
     ),
     custom: (
       <>
-        <Section {...sectionProps('pattern')} title="Pattern" summary={pattern.id === 'none' ? 'nenhum' : pattern.id}>
+        <Section {...sectionProps('pattern')} title="Estampa" summary={pattern.id === 'none' ? 'nenhuma' : PATTERN_DEFS[pattern.id].label}>
           <PatternDevControls pattern={pattern} onChange={onPatternChange} />
         </Section>
-        <Section {...sectionProps('customArtwork')} title="Custom artwork" summary={customArtwork ? 'ativa' : undefined}>
+        <Section {...sectionProps('customArtwork')} title="Arte própria" summary={customArtwork ? 'ativa' : undefined}>
           <CustomArtworkDevControls
             artwork={artwork}
             texts={texts}
@@ -304,7 +322,7 @@ export default function EditorPanel({
             onChange={onCustomArtworkChange}
           />
         </Section>
-        <Section {...sectionProps('stickers')} title="Stickers" summary={stickers.length > 0 ? stickers.length : undefined}>
+        <Section {...sectionProps('stickers')} title="Adesivos" summary={stickers.length > 0 ? stickers.length : undefined}>
           <StickersDevControls
             stickers={stickers}
             onChange={onStickersChange}
@@ -315,7 +333,7 @@ export default function EditorPanel({
       </>
     ),
     effects: (
-      <Section {...sectionProps('condensation')} title="Condensação" summary={condensation.enabled ? 'ligada' : 'desligada'}>
+      <Section {...sectionProps('condensation')} title="Condensação" bare>
         <CondensationDevControls condensation={condensation} onChange={onCondensationChange} />
       </Section>
     ),
@@ -327,7 +345,7 @@ export default function EditorPanel({
         <Section
           {...sectionProps('download')}
           title="Exportar imagem"
-          summary={`${exportOptions.withBackground ? 'com fundo' : 'só a lata'} · ${EXPORT_FORMATS[exportOptions.format].label}`}
+          summary={EXPORT_FORMATS[exportOptions.format].label}
         >
           <ExportControls options={exportOptions} onOptionsChange={onExportOptionsChange} onExport={onExport} />
         </Section>
@@ -337,12 +355,15 @@ export default function EditorPanel({
 
   const current = GROUPS.find((candidate) => candidate.id === group) ?? GROUPS[0]
   const mode = useLayoutMode()
+  const isTouch = useIsTouch()
   const compact = mode !== 'desktop'
 
   const root = useRef<HTMLDivElement>(null)
   const stage = useParentSize(root, mode)
   // Em modos laterais, a lata é recentrada na parte do palco que o painel não cobre (no desktop largo ela fica sob o painel, como sempre)
-  const sideWidth = mode === 'landscape' ? SIDE.landscape : SIDE.desktop
+  // no desktop o painel cresce com a tela (de 320px até 480px) para dar mais espaço às barras de ajuste
+  const desktopPanel = Math.round(Math.min(480, Math.max(320, stage.width * 0.3)))
+  const sideWidth = mode === 'landscape' ? SIDE.landscape : { ...SIDE.desktop, panel: desktopPanel }
   const covered = sideWidth.margin + sideWidth.nav + (collapsed ? 0 : sideWidth.panel)
   const sideInset = mode === 'sheet' || (mode === 'desktop' && stage.width >= WIDE_STAGE) ? 0 : covered
   useEffect(() => {
@@ -350,12 +371,37 @@ export default function EditorPanel({
     return () => setViewInset('side', null)
   }, [sideInset])
 
+  // Esc fecha o painel de edição (o botão "ESC" do cabeçalho faz o mesmo)
+  useEffect(() => {
+    if (collapsed) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented) onPanelChange({ ...panel, collapsed: true })
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [collapsed, panel, onPanelChange])
+
   const toggleGroup = (id: GroupId) => {
     if (id === group && !collapsed) onPanelChange({ ...panel, collapsed: true })
     else onPanelChange({ group: id, section: FIRST_SECTION[id], collapsed: false })
   }
 
-  const tabs = GROUPS.map(({ id, label, shortLabel, icon: Icon }) => {
+  // 1–6 abrem (ou fecham, se já está aberta) a aba correspondente; ignorado ao digitar em campos e com Ctrl/Alt/Meta
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+      const target = event.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return
+      const shortcutGroup = /^[1-6]$/.test(event.key) ? GROUPS[Number(event.key) - 1] : undefined
+      if (!shortcutGroup) return
+      event.preventDefault()
+      toggleGroup(shortcutGroup.id)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  })
+
+  const tabs = GROUPS.map(({ id, label, shortLabel, icon: Icon }, index) => {
     const active = id === group && !collapsed
     return (
       <button
@@ -364,10 +410,11 @@ export default function EditorPanel({
         onClick={() => toggleGroup(id)}
         aria-pressed={active}
         aria-label={label}
-        title={label}
+        aria-keyshortcuts={String(index + 1)}
+        title={isTouch ? label : `${label} (tecla ${index + 1})`}
         className={`flex flex-1 touch-manipulation flex-col items-center justify-center gap-1 border-b-2 px-0.5 py-2 text-[10px] font-medium uppercase tracking-normal transition-colors active:bg-neutral-800 md:flex-none md:border-b-0 md:border-l-2 md:text-[9px] ${
           mode === 'sheet' ? 'min-h-14' : ''
-        } ${mode === 'landscape' ? 'border-b-0 border-l-2 py-1' : ''} ${
+        } ${mode === 'landscape' ? 'min-h-11 border-b-0 border-l-2 py-0.5' : ''} ${
           active ? 'border-primary bg-neutral-900 text-primary' : 'border-transparent text-neutral-400 hover:bg-neutral-900 hover:text-white'
         }`}
       >
@@ -391,6 +438,7 @@ export default function EditorPanel({
     <CompactContext.Provider value={compact}>
       <motion.div
         ref={root}
+        style={{ '--panel-w': `${desktopPanel}px` } as CSSProperties}
         initial={{ x: -48, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
@@ -404,7 +452,7 @@ export default function EditorPanel({
           aria-label="Grupos de edição"
           className={
             mode === 'landscape'
-              ? 'pointer-events-auto flex w-16 shrink-0 flex-col border-r border-neutral-800 bg-black'
+              ? 'pointer-events-auto flex w-16 shrink-0 flex-col overflow-y-auto border-r border-neutral-800 bg-black'
               : 'pointer-events-auto flex shrink-0 justify-around border-t border-neutral-800 bg-black md:absolute md:left-0 md:top-1/2 md:w-20 md:-translate-y-1/2 md:flex-col md:justify-start md:border md:border-t'
           }
         >
@@ -416,7 +464,7 @@ export default function EditorPanel({
             className={
               mode === 'landscape'
                 ? 'pointer-events-auto flex h-full w-72 flex-col border-r border-neutral-800 bg-neutral-950'
-                : 'pointer-events-auto flex max-h-[42dvh] w-full flex-col border border-neutral-800 border-b-0 bg-neutral-950 md:ml-20 md:max-h-full md:w-80 md:border-b md:border-l-0'
+                : 'pointer-events-auto flex max-h-[42dvh] w-full flex-col border border-neutral-800 border-b-0 bg-neutral-950 md:ml-20 md:max-h-full md:w-[var(--panel-w)] md:border-b md:border-l-0'
             }
           >
             <header className="flex shrink-0 items-center justify-between border-b border-primary bg-black px-3 py-1.5">
@@ -425,12 +473,16 @@ export default function EditorPanel({
                 type="button"
                 onClick={() => onPanelChange({ ...panel, collapsed: true })}
                 aria-label="Fechar painel"
-                className="flex size-6 items-center justify-center border border-neutral-500 text-white transition-colors hover:border-primary hover:text-primary pointer-coarse:size-12"
+                aria-keyshortcuts="Escape"
+                title={isTouch ? undefined : 'Fechar painel (Esc)'}
+                className={`flex items-center justify-center border border-neutral-500 text-white transition-colors hover:border-primary hover:text-primary ${
+                  isTouch ? 'size-12' : 'h-6 px-1.5 text-[10px] font-semibold uppercase tracking-wider'
+                }`}
               >
-                <X size={14} aria-hidden />
+                {isTouch ? <X size={14} aria-hidden /> : <span aria-hidden>Esc</span>}
               </button>
             </header>
-            <div className="editor-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">{content[group]}</div>
+            <EditorScroll>{content[group]}</EditorScroll>
           </div>
         )}
       </motion.div>

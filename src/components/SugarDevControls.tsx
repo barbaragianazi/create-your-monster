@@ -1,11 +1,13 @@
 import { SUGAR_LABEL_OPTIONS, type SugarConfig, type SugarLabel } from './canSugarLabel'
 import type { TextElementConfig, TextsConfig } from './canText'
 import { TextElementSection } from './TextDevControls'
+import AdvancedAdjust from './AdvancedAdjust'
+import SliderRow from './SliderRow'
 
 const SLIDERS = [
-  { key: 'scale', label: 'Escala', min: 0.5, max: 3 },
-  { key: 'x', label: 'Posição X', min: -2.6, max: 2.6 },
-  { key: 'y', label: 'Posição Y', min: -1.6, max: 2 },
+  { key: 'scale', label: 'Tamanho', min: 0.5, max: 3 },
+  { key: 'x', label: 'Horizontal', min: -2.6, max: 2.6 },
+  { key: 'y', label: 'Vertical', min: -1.6, max: 2 },
 ] as const
 
 // Controles de uma seção do painel de edição (o cabeçalho e o acordeão ficam no EditorPanel)
@@ -26,10 +28,21 @@ export default function SugarDevControls({
   const updateZeroSugar = (patch: Partial<TextElementConfig>) =>
     onTextsChange({ ...texts, zeroSugar: { ...texts.zeroSugar, ...patch } })
 
+  const renderSlider = ({ key, label, min, max }: (typeof SLIDERS)[number]) => (
+    <SliderRow
+      key={key}
+      label={label}
+      min={min}
+      max={max}
+      value={sugar.highSugar[key]}
+      onChange={(next) => onSugarChange({ ...sugar, highSugar: { ...sugar.highSugar, [key]: next } })}
+    />
+  )
+
   return (
     <div>
       <div className="flex flex-col gap-3">
-        <div role="group" aria-label="Tipo de açúcar" className="flex gap-2">
+        <div role="group" aria-label="Selo de açúcar" className="flex gap-2">
           {SUGAR_LABEL_OPTIONS.map(({ id, label }) => (
             <button
               key={id}
@@ -51,23 +64,8 @@ export default function SugarDevControls({
 
         {sugar.type === 'high-sugar' && (
           <div className="flex flex-col gap-2">
-            <p className="text-xs text-neutral-600">Selo oficial preto e branco: só posição e escala.</p>
-            {SLIDERS.map(({ key, label, min, max }) => (
-              <label key={key} className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
-                {label}
-                <input
-                  type="range"
-                  min={min}
-                  max={max}
-                  step={0.01}
-                  value={sugar.highSugar[key]}
-                  onChange={(e) =>
-                    onSugarChange({ ...sugar, highSugar: { ...sugar.highSugar, [key]: Number(e.target.value) } })
-                  }
-                />
-                <span className="text-right tabular-nums">{sugar.highSugar[key].toFixed(2)}</span>
-              </label>
-            ))}
+            {SLIDERS.filter(({ key }) => key === 'scale').map(renderSlider)}
+            <AdvancedAdjust>{SLIDERS.filter(({ key }) => key !== 'scale').map(renderSlider)}</AdvancedAdjust>
           </div>
         )}
       </div>

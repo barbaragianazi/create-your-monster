@@ -14,7 +14,7 @@ import type { CustomArtwork } from './components/canCustomArtworkLayer'
 import { DEFAULT_PATTERN, type PatternConfig } from './components/canPattern'
 import { DEFAULT_SUGAR, type SugarConfig } from './components/canSugarLabel'
 import { DEFAULT_TEXTS, type TextsConfig } from './components/canText'
-import type { Sticker } from './components/canStickers'
+import { type Sticker } from './components/canStickers'
 import { useInteractiveElements } from './components/useInteractiveElements'
 import type { CanShoulderConfig } from './components/canShoulder'
 import { DEFAULT_SEAL_CUSTOMIZATION, type SealCustomization } from './components/sealStyle'
@@ -125,7 +125,11 @@ export default function App() {
     // a página nunca rola: o título ocupa o que precisa e a área da lata (com o painel sobreposto) ocupa o resto
     <MotionConfig reducedMotion="user">
     <div className="flex h-dvh flex-col overflow-hidden">
-      <AppHeader group={panel.group} onGroupChange={(group) => setPanel(showGroup(group))} />
+      <AppHeader
+        group={panel.group}
+        onGroupChange={(group) => setPanel(showGroup(group))}
+        onDownload={() => void exportApiRef.current?.(exportOptions)}
+      />
 
       <div className="relative min-h-0 flex-1">
       <CanViewer

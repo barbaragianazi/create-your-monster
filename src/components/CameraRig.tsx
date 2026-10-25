@@ -142,6 +142,30 @@ export default function CameraRig({
     if (!settled) invalidate()
   })
 
+  // Modo dev: demo/render-presets.mjs posiciona a câmera por aqui para exportar a mesma lata em ângulos diferentes (graus; sem argumentos = enquadramento inicial)
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    Object.assign(window, {
+      __cymCamera: (view?: { azimuth?: number; polar?: number; distance?: number }) => {
+        const controls = controlsRef.current
+        if (!controls) return
+        const spherical = view
+          ? new Spherical(view.distance ?? initialSpherical.radius, MathUtils.degToRad(view.polar ?? MathUtils.radToDeg(initialSpherical.phi)), MathUtils.degToRad(view.azimuth ?? 0))
+          : initialSpherical.clone()
+        goal.current = null
+        controls.target.copy(initialTarget)
+        camera.position.copy(initialTarget).add(new Vector3().setFromSpherical(spherical))
+        controls.enableDamping = false
+        controls.update()
+        controls.enableDamping = true
+        invalidate()
+      },
+    })
+    return () => {
+      delete (window as { __cymCamera?: unknown }).__cymCamera
+    }
+  }, [camera, invalidate])
+
   useEffect(() => {
     const raycaster = new Raycaster()
     const pointer = new Vector2()

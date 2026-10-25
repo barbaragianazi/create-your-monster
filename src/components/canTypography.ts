@@ -7,7 +7,8 @@
 import { drawWrapped } from './canWrap'
 
 // --- Fontes ------------------------------------------------------------------------------------------------------
-// O projeto ainda NÃO embarca arquivos de fonte: só há fontes do sistema. Novas fontes (web ou locais) entram aqui, e o
+// Só a Impact é embarcada (@font-face em index.css, arquivo src/fonts/impact.ttf). As demais são
+// fontes do sistema. Novas fontes (web ou locais) entram aqui, e o
 // carregamento (`loadTextStyleFont`) já é aguardado antes de qualquer desenho, então nunca desenha com fallback.
 
 /** Pesos com face REAL na fonte. O Bold nunca é simulado: se a fonte não o tem, o peso resolvido cai para o mais próximo */
@@ -26,10 +27,12 @@ export type FontDef = {
   probe: string
   /** pesos com face real */
   weights: readonly FontWeight[]
+  /** embarcada no app (@font-face em index.css): existe em qualquer dispositivo, sem detecção */
+  bundled?: boolean
 }
 
 export const FONT_CATALOG: readonly FontDef[] = [
-  { id: 'impact', label: 'Impact', family: "Impact, Haettenschweiler, 'Arial Narrow', 'Arial Black', sans-serif", probe: 'Impact', weights: [400] },
+  { id: 'impact', label: 'Impact', family: "'Impact Flavor', Impact, Haettenschweiler, 'Arial Narrow', 'Arial Black', sans-serif", probe: 'Impact', weights: [400], bundled: true },
   { id: 'arial-narrow', label: 'Arial Narrow', family: "'Arial Narrow', Arial, Helvetica, sans-serif", probe: 'Arial Narrow', weights: [400, 700] },
   { id: 'arial', label: 'Arial', family: 'Arial, Helvetica, sans-serif', probe: 'Arial', weights: [400, 700] },
   { id: 'arial-black', label: 'Arial Black', family: "'Arial Black', Arial, Helvetica, sans-serif", probe: 'Arial Black', weights: [400] },
@@ -51,6 +54,7 @@ const availability = new Map<FontId, boolean>()
 let probeContext: CanvasRenderingContext2D | null | undefined
 
 function isFontInstalled(font: FontDef) {
+  if (font.bundled) return true
   const cached = availability.get(font.id)
   if (cached !== undefined) return cached
 

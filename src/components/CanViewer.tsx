@@ -35,6 +35,29 @@ import { CAN_FINISHES, CAN_PARTS, type CanConfig, type CanPart } from './canMate
 
 const MODEL_URL = '/models/monster-can.glb'
 
+// Sem WebGL (aceleração de hardware desligada ou GPU bloqueada no navegador) o 3D não existe: em vez do palco vazio, um aviso
+function detectWebGL() {
+  try {
+    const probe = document.createElement('canvas')
+    const gl = probe.getContext('webgl2') ?? probe.getContext('webgl')
+    gl?.getExtension('WEBGL_lose_context')?.loseContext() // devolve o contexto de teste
+    return !!gl
+  } catch {
+    return false
+  }
+}
+
+function NoWebGL() {
+  return (
+    <div role="alert" className="absolute inset-0 flex items-center justify-center px-6">
+      <div className="max-w-sm border border-primary bg-black/90 p-4 text-sm leading-relaxed text-neutral-300">
+        <p className="font-monster text-2xl uppercase leading-none tracking-wide text-white">Não foi possível exibir a lata</p>
+        <p className="mt-2">Este navegador está com o 3D (WebGL) desativado. Ative a aceleração de hardware nas configurações do navegador (Sistema) e reinicie-o, ou abra o site em outro navegador.</p>
+      </div>
+    </div>
+  )
+}
+
 function Can({
   config,
   pattern,
@@ -286,6 +309,7 @@ export default function CanViewer({
       exportApiRef.current = null
     }
   })
+  const [webgl] = useState(detectWebGL)
   const [zoomState, setZoomState] = useState<ZoomState>({ atMin: false, atMax: false })
   // ?quality=0|1|2 força um nível (teste); sem isso, o AdaptiveQuality decide
   const forced = new URLSearchParams(location.search).get('quality')
@@ -297,8 +321,9 @@ export default function CanViewer({
     <div className="relative h-full w-full">
       {/* cursor grab/grabbing só na área do 3D (os controles ficam fora deste contêiner) */}
       <StageBackdrop backdrop={backdrop} floorColor={backdropColors.floor} glowColor={backdropColors.glow} image={backdropColors.image} />
+      {!webgl && <NoWebGL />}
       <div data-can-stage data-quality={quality} className="animate-stage-rise absolute inset-0">
-        <Canvas
+        {webgl && <Canvas
           camera={{ position: [...INITIAL_CAMERA_POSITION], fov: CAMERA_FOV, near: 0.1, far: 100 }}
           frameloop="demand"
           dpr={quality === 0 ? [1, 1.5] : 1}
@@ -342,7 +367,7 @@ export default function CanViewer({
             partTagRef={partTagRef}
             overlayRef={overlayRef}
           />
-        </Canvas>
+        </Canvas>}
         <PartTag ref={partTagRef} />
       </div>
 

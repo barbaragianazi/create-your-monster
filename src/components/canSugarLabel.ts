@@ -18,8 +18,8 @@ export type SugarConfig = {
 export const DEFAULT_SUGAR: SugarConfig = {
   // preserva o visual atual da lata (Zero Sugar visível)
   type: 'zero',
-  // frente, acima do M, no início do ombro: cabe entre o topo do M (~1,55) e o "TAURINE + GINSENG" (~1,79)
-  highSugar: { scale: 1, x: 0, y: 1.69 },
+  // canto superior direito da frente, no início do ombro, como na lata real
+  highSugar: { scale: 1, x: 0.52, y: 1.51 },
 }
 
 type SugarOutput = {

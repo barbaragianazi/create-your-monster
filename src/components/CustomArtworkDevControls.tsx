@@ -10,11 +10,16 @@ import { StickerError } from './canStickers'
 import type { SugarConfig } from './canSugarLabel'
 import type { TextsConfig } from './canText'
 import { downloadArtworkTemplate } from './canTemplate'
+import AdvancedAdjust from './AdvancedAdjust'
+import SliderRow from './SliderRow'
+
+// o essencial fica à vista; posição e rotação ficam em "Ajustes avançados" (a arte também se arrasta na lata)
+const BASIC: readonly string[] = ['scale', 'opacity']
 
 const SLIDERS = [
-  { key: 'scale', label: 'Escala', step: 0.01, format: (v: number) => v.toFixed(2) },
-  { key: 'x', label: 'Posição X', step: 0.01, format: (v: number) => v.toFixed(2) },
-  { key: 'y', label: 'Posição Y', step: 0.01, format: (v: number) => v.toFixed(2) },
+  { key: 'scale', label: 'Tamanho', step: 0.01, format: (v: number) => v.toFixed(2) },
+  { key: 'x', label: 'Horizontal', step: 0.01, format: (v: number) => v.toFixed(2) },
+  { key: 'y', label: 'Vertical', step: 0.01, format: (v: number) => v.toFixed(2) },
   { key: 'rotation', label: 'Rotação', step: 1, format: (v: number) => `${Math.round(v)}°` },
   { key: 'opacity', label: 'Opacidade', step: 0.01, format: (v: number) => v.toFixed(2) },
 ] as const
@@ -65,6 +70,19 @@ export default function CustomArtworkDevControls({
   const update = (patch: Partial<CustomArtworkPlacement>) => {
     if (customArtwork) onChange({ ...customArtwork, ...patch })
   }
+
+  const renderSlider = ({ key, label, step, format }: (typeof SLIDERS)[number]) =>
+    customArtwork && (
+      <SliderRow
+        key={key}
+        label={label}
+        {...CUSTOM_ARTWORK_LIMITS[key]}
+        step={step}
+        value={customArtwork[key]}
+        format={format}
+        onChange={(next) => update({ [key]: next })}
+      />
+    )
 
   return (
     <div>
@@ -127,19 +145,8 @@ export default function CustomArtworkDevControls({
               Visível
             </label>
 
-            {SLIDERS.map(({ key, label, step, format }) => (
-              <label key={key} className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
-                {label}
-                <input
-                  type="range"
-                  {...CUSTOM_ARTWORK_LIMITS[key]}
-                  step={step}
-                  value={customArtwork[key]}
-                  onChange={(e) => update({ [key]: Number(e.target.value) })}
-                />
-                <span className="text-right tabular-nums">{format(customArtwork[key])}</span>
-              </label>
-            ))}
+            {SLIDERS.filter(({ key }) => BASIC.includes(key)).map(renderSlider)}
+            <AdvancedAdjust>{SLIDERS.filter(({ key }) => !BASIC.includes(key)).map(renderSlider)}</AdvancedAdjust>
 
             <div className="flex gap-2">
               <button type="button" onClick={() => inputRef.current?.click()} className={buttonClass}>

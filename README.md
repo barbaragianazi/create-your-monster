@@ -2,7 +2,11 @@
 
 Configurador 3D de lata em tempo real. Você parte de uma lata neutra e monta a sua própria versão: cor, logo, textos, adesivos, padrões, ombro, lacre e mais, com feedback visual imediato.
 
+**[Testar online → createyourmonster.vercel.app](https://createyourmonster.vercel.app/)**
+
 > Projeto conceitual e **não oficial**, feito para portfólio pessoal. Não tem vínculo com a Monster Energy.
+
+![Editor do Create Your Monster com a lata 3D no centro e as abas de edição](docs/images/editor.png)
 
 ## O que dá pra fazer
 
@@ -14,6 +18,12 @@ Configurador 3D de lata em tempo real. Você parte de uma lata neutra e monta a 
 - Desfazer / refazer alterações
 - Escolher o fundo do palco e exportar imagem da lata
 - Layout adaptado para desktop e mobile (bottom sheet), com ajuste automático de qualidade
+
+## Exemplos
+
+| Arte personalizada | Volt Noir | Retro Sunset |
+| --- | --- | --- |
+| ![Aba de arte personalizada no editor](docs/images/arte-personalizada.png) | ![Lata Volt Noir](docs/images/volt-noir.png) | ![Lata Retro Sunset](docs/images/retro-sunset.png) |
 
 ## Stack
 
@@ -52,7 +62,6 @@ src/
   components/    Viewer 3D, painéis do editor, controles e lógica de textura da lata
   cursors.ts     Cursores customizados
 tests/           Testes de lógica da lata (wrap, interação, camadas de arte)
-demo/            Script Playwright para gravar a demo
 ```
 
 A lata é desenhada em camadas de canvas (`can*.ts`) que viram textura aplicada ao modelo GLB. Os `*DevControls` são painéis de ajuste fino usados no desenvolvimento.

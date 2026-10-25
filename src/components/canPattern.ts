@@ -45,7 +45,7 @@ export const PATTERNS = {
    * As classes vêm de <style>, então um <style> extra no fim sobrescreve sem tocar nos elementos.
    */
   scratches: {
-    label: 'Scratches',
+    label: 'Riscos',
     loadSvg: () => import('../assets/patterns/scratches.svg?raw').then((m) => m.default),
     aspect: 1,
     baseHeight: 1,
@@ -69,7 +69,7 @@ export const PATTERNS = {
    * Secondary: o retângulo de fundo.
    */
   waves: {
-    label: 'Waves',
+    label: 'Ondas',
     loadSvg: () => import('../assets/patterns/waves.svg?raw').then((m) => m.default),
     aspect: 1000 / 600,
     baseHeight: 1,

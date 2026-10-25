@@ -175,7 +175,7 @@ export type ArtworkElementDef = {
 export const ARTWORK_ELEMENTS: readonly ArtworkElementDef[] = [
   {
     id: 'm',
-    label: 'Monster M',
+    label: 'Logo',
     svg: mSvg,
     sourceFill: '#AEC90B',
     outlineFill: '#1D1D1B',

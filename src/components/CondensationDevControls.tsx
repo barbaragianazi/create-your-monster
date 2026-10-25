@@ -1,4 +1,5 @@
 import { CONDENSATION_LIMITS, type CondensationConfig } from './canCondensation'
+import SliderRow from './SliderRow'
 
 const SLIDERS = [
   { key: 'amount', label: 'Quantidade', min: 0, max: 1, step: 0.01, format: (v: number) => `${Math.round(v * 100)}%` },
@@ -32,19 +33,17 @@ export default function CondensationDevControls({
         </label>
 
         {SLIDERS.map(({ key, label, min, max, step, format }) => (
-          <label key={key} className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
-            {label}
-            <input
-              type="range"
-              min={min}
-              max={max}
-              step={step}
-              value={condensation[key]}
-              disabled={!condensation.enabled}
-              onChange={(e) => update({ [key]: Number(e.target.value) })}
-            />
-            <span className="text-right tabular-nums">{format(condensation[key])}</span>
-          </label>
+          <SliderRow
+            key={key}
+            label={label}
+            min={min}
+            max={max}
+            step={step}
+            value={condensation[key]}
+            format={format}
+            disabled={!condensation.enabled}
+            onChange={(next) => update({ [key]: next })}
+          />
         ))}
       </div>
     </div>

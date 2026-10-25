@@ -8,7 +8,7 @@ import { paintBackdrop, type BackdropColors, type BackdropId } from './stageBack
 export type ExportFormat = 'instagram' | 'wide'
 
 export const EXPORT_FORMATS: Record<ExportFormat, { label: string; hint: string; width: number; height: number; fileSuffix: string }> = {
-  instagram: { label: 'Instagram', hint: 'Feed 4:5 · 1080×1350', width: 1080, height: 1350, fileSuffix: 'instagram' },
+  instagram: { label: 'Instagram Stories', hint: 'Stories 9:16 · 1080×1920', width: 1080, height: 1920, fileSuffix: 'stories' },
   wide: { label: '16:9', hint: 'Widescreen · 1920×1080', width: 1920, height: 1080, fileSuffix: '16x9' },
 }
 

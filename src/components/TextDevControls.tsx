@@ -1,11 +1,5 @@
 import {
-  FONT_WEIGHT_LABELS,
   TEXT_LIMITS,
-  getAvailableFonts,
-  getFontDef,
-  resolveFontWeight,
-  type FontId,
-  type FontWeight,
   type TextAlign,
   type TextStroke,
   type TextStyle,
@@ -19,6 +13,8 @@ import {
   type TextElementDef,
   type TextElementId,
 } from './canText'
+import AdvancedAdjust from './AdvancedAdjust'
+import SliderRow from './SliderRow'
 
 // Ferramenta temporária de calibração (não faz parte da UI final). x/y/rotation/fontSize são propriedades do elemento,
 // não dos sliders: a edição direta futura (drag/touch sobre a lata) escreve nas mesmas propriedades.
@@ -31,42 +27,6 @@ const ALIGN_OPTIONS: { id: TextAlign; label: string }[] = [
 
 const BUTTON_ON = 'border-neutral-800 bg-neutral-800 text-white'
 const BUTTON_OFF = 'border-neutral-400 bg-white'
-
-function SliderRow({
-  label,
-  scope,
-  min,
-  max,
-  step = 0.01,
-  value,
-  format = (v) => v.toFixed(2),
-  onChange,
-}: {
-  label: string
-  scope: string
-  min: number
-  max: number
-  step?: number
-  value: number
-  format?: (value: number) => string
-  onChange: (value: number) => void
-}) {
-  return (
-    <label className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
-      {label}
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={`${scope}: ${label}`}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-      <span className="text-right tabular-nums">{format(value)}</span>
-    </label>
-  )
-}
 
 function ToggleRow({
   label,
@@ -124,8 +84,8 @@ function ChoiceRow<T extends string | number>({
   )
 }
 
-// Controles tipográficos completos, na ordem: texto, fonte, peso, tamanho, espaçamento, alinhamento, maiúsculas, cor,
-// contorno, rotação, auto ajustar, largura máxima, posição, visibilidade
+// Controles tipográficos completos, na ordem: texto + visibilidade, tamanho, espaçamento e, em ajustes avançados,
+// alinhamento, maiúsculas, cor, contorno, rotação, auto ajustar, largura máxima, posição
 function FullControls({
   def,
   config,
@@ -142,17 +102,6 @@ function FullControls({
   const patchStyle = (patch: Partial<TextStyle>) => onChange({ style: { ...style, ...patch } })
   const patchStroke = (patch: Partial<TextStroke>) => patchStyle({ stroke: { ...style.stroke, ...patch } })
 
-  // fontes realmente instaladas; a fonte atual sempre aparece, mesmo que este dispositivo não a tenha
-  const fonts = getAvailableFonts()
-  const fontOptions = fonts.some((font) => font.id === style.fontFamily) ? fonts : [...fonts, getFontDef(style.fontFamily)]
-  const fontDef = getFontDef(style.fontFamily)
-  const effectiveWeight = resolveFontWeight(style.fontFamily, style.fontWeight)
-  const weightOptions = (Object.keys(FONT_WEIGHT_LABELS).map(Number) as FontWeight[]).map((weight) => ({
-    id: weight,
-    label: FONT_WEIGHT_LABELS[weight],
-    disabled: !fontDef.weights.includes(weight),
-    title: fontDef.weights.includes(weight) ? undefined : `${fontDef.label} não tem ${FONT_WEIGHT_LABELS[weight]} real`,
-  }))
   // o anel (texto superior) distribui as repetições sozinho: alinhamento, rotação e largura máxima não se aplicam
   const ring = Boolean(def.ring)
 
@@ -160,42 +109,34 @@ function FullControls({
     <section className="flex flex-col gap-2">
       <h3 className="text-xs font-semibold uppercase tracking-wide">{def.label}</h3>
 
-      <input
-        type="text"
-        value={config.content}
-        maxLength={40}
-        onChange={(e) => onChange({ content: e.target.value })}
-        aria-label={`${scope}: Texto`}
-        className="rounded border border-neutral-400 bg-white px-2 py-1.5"
-      />
-
-      <label className="flex flex-col gap-2">
-        Fonte
-        <select
-          value={style.fontFamily}
-          aria-label={`${scope}: Fonte`}
-          onChange={(e) => patchStyle({ fontFamily: e.target.value as FontId })}
-          className="rounded border border-neutral-400 bg-white px-2 py-1.5"
-        >
-          {fontOptions.map((font) => (
-            <option key={font.id} value={font.id}>
-              {font.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <ChoiceRow<FontWeight>
-        label="Peso"
-        scope={scope}
-        options={weightOptions}
-        value={effectiveWeight}
-        onChange={(fontWeight) => patchStyle({ fontWeight })}
-      />
+      <div className="flex items-center gap-3">
+        <input
+          type="text"
+          value={config.content}
+          maxLength={40}
+          onChange={(e) => onChange({ content: e.target.value })}
+          aria-label={`${scope}: Texto`}
+          className="min-w-0 flex-1 rounded border border-neutral-400 bg-white px-2 py-1.5"
+        />
+        {showVisibility && (
+          <ToggleRow label="Visível" scope={scope} checked={config.visible} onChange={(visible) => onChange({ visible })} />
+        )}
+      </div>
 
       <SliderRow
         label="Tamanho"
         scope={scope}
+        lead={{
+          label: 'Cor',
+          control: (
+            <input
+              type="color"
+              value={style.color}
+              aria-label={`${scope}: Cor`}
+              onChange={(e) => patchStyle({ color: e.target.value })}
+            />
+          ),
+        }}
         min={TEXT_LIMITS.fontSize.min}
         max={TEXT_LIMITS.fontSize.max}
         value={style.fontSize}
@@ -210,81 +151,68 @@ function FullControls({
         onChange={(letterSpacing) => patchStyle({ letterSpacing })}
       />
 
-      {!ring && (
-        <ChoiceRow<TextAlign>
-          label="Alinhamento"
-          scope={scope}
-          options={ALIGN_OPTIONS}
-          value={style.textAlign}
-          onChange={(textAlign) => patchStyle({ textAlign })}
-        />
-      )}
+      <AdvancedAdjust>
+        {!ring && (
+          <ChoiceRow<TextAlign>
+            label="Alinhamento"
+            scope={scope}
+            options={ALIGN_OPTIONS}
+            value={style.textAlign}
+            onChange={(textAlign) => patchStyle({ textAlign })}
+          />
+        )}
 
-      <ToggleRow label="MAIÚSCULAS" scope={scope} checked={style.uppercase} onChange={(uppercase) => patchStyle({ uppercase })} />
+        <ToggleRow label="MAIÚSCULAS" scope={scope} checked={style.uppercase} onChange={(uppercase) => patchStyle({ uppercase })} />
 
-      <label className="flex items-center justify-between gap-2">
-        Cor
-        <input
-          type="color"
-          value={style.color}
-          aria-label={`${scope}: Cor`}
-          onChange={(e) => patchStyle({ color: e.target.value })}
-        />
-      </label>
-
-      <ToggleRow label="Contorno" scope={scope} checked={style.stroke.enabled} onChange={(enabled) => patchStroke({ enabled })} />
-      {style.stroke.enabled && (
-        <>
-          <label className="flex items-center justify-between gap-2">
-            Cor do contorno
-            <input
-              type="color"
-              value={style.stroke.color}
-              aria-label={`${scope}: Cor do contorno`}
-              onChange={(e) => patchStroke({ color: e.target.value })}
-            />
-          </label>
+        <ToggleRow label="Contorno" scope={scope} checked={style.stroke.enabled} onChange={(enabled) => patchStroke({ enabled })} />
+        {style.stroke.enabled && (
           <SliderRow
             label="Espessura"
             scope={scope}
+            lead={{
+              label: 'Cor',
+              control: (
+                <input
+                  type="color"
+                  value={style.stroke.color}
+                  aria-label={`${scope}: Cor do contorno`}
+                  onChange={(e) => patchStroke({ color: e.target.value })}
+                />
+              ),
+            }}
             min={TEXT_LIMITS.strokeWidth.min}
             max={TEXT_LIMITS.strokeWidth.max}
             value={style.stroke.width}
             onChange={(width) => patchStroke({ width })}
           />
-        </>
-      )}
+        )}
 
-      {!ring && (
-        <>
-          <SliderRow
-            label="Rotação"
-            scope={scope}
-            min={TEXT_LIMITS.rotation.min}
-            max={TEXT_LIMITS.rotation.max}
-            step={1}
-            value={style.rotation}
-            format={(v) => `${Math.round(v)}°`}
-            onChange={(rotation) => patchStyle({ rotation })}
-          />
-          <ToggleRow label="Auto ajustar" scope={scope} checked={style.autoFit} onChange={(autoFit) => patchStyle({ autoFit })} />
-          <SliderRow
-            label="Largura máx."
-            scope={scope}
-            min={TEXT_LIMITS.maxWidth.min}
-            max={TEXT_LIMITS.maxWidth.max}
-            value={style.maxWidth}
-            onChange={(maxWidth) => patchStyle({ maxWidth })}
-          />
-        </>
-      )}
-
-      <SliderRow label="Posição X" scope={scope} {...TEXT_POSITION_LIMITS.x} value={config.x} onChange={(x) => onChange({ x })} />
-      <SliderRow label="Posição Y" scope={scope} {...TEXT_POSITION_LIMITS.y} value={config.y} onChange={(y) => onChange({ y })} />
-
-      {showVisibility && (
-        <ToggleRow label="Visível" scope={scope} checked={config.visible} onChange={(visible) => onChange({ visible })} />
-      )}
+        {!ring && (
+          <>
+            <SliderRow
+              label="Rotação"
+              scope={scope}
+              min={TEXT_LIMITS.rotation.min}
+              max={TEXT_LIMITS.rotation.max}
+              step={1}
+              value={style.rotation}
+              format={(v) => `${Math.round(v)}°`}
+              onChange={(rotation) => patchStyle({ rotation })}
+            />
+            <ToggleRow label="Auto ajustar" scope={scope} checked={style.autoFit} onChange={(autoFit) => patchStyle({ autoFit })} />
+            <SliderRow
+              label="Largura máx."
+              scope={scope}
+              min={TEXT_LIMITS.maxWidth.min}
+              max={TEXT_LIMITS.maxWidth.max}
+              value={style.maxWidth}
+              onChange={(maxWidth) => patchStyle({ maxWidth })}
+            />
+          </>
+        )}
+        <SliderRow label="Horizontal" scope={scope} {...TEXT_POSITION_LIMITS.x} value={config.x} onChange={(x) => onChange({ x })} />
+        <SliderRow label="Vertical" scope={scope} {...TEXT_POSITION_LIMITS.y} value={config.y} onChange={(y) => onChange({ y })} />
+      </AdvancedAdjust>
     </section>
   )
 }
@@ -340,20 +268,19 @@ function BasicControls({
 
       {def.background && config.background && (
         <>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={config.background.visible}
-              aria-label={`${scope}: Faixa`}
-              onChange={(e) => patchBackground({ visible: e.target.checked })}
-            />
-            Faixa
-          </label>
-          <label className="flex items-center justify-between gap-2">
-            Cor da faixa
+          <div className="flex items-center justify-between gap-2">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={config.background.visible}
+                aria-label={`${scope}: Faixa`}
+                onChange={(e) => patchBackground({ visible: e.target.checked })}
+              />
+              Faixa
+            </label>
             <input type="color" value={config.background.color} aria-label={`${scope}: Cor da faixa`}
               onChange={(e) => patchBackground({ color: e.target.value })} />
-          </label>
+          </div>
           <SliderRow label="Largura" scope={scope} {...TEXT_BACKGROUND_LIMITS.width}
             value={config.background.width} onChange={(width) => patchBackground({ width })} />
           <SliderRow label="Altura" scope={scope} {...TEXT_BACKGROUND_LIMITS.height}
@@ -372,8 +299,10 @@ function BasicControls({
         value={config.style.fontSize}
         onChange={(fontSize) => patchStyle({ fontSize })}
       />
-      <SliderRow label="Posição X" scope={scope} {...TEXT_POSITION_LIMITS.x} value={config.x} onChange={(x) => onChange({ x })} />
-      <SliderRow label="Posição Y" scope={scope} {...TEXT_POSITION_LIMITS.y} value={config.y} onChange={(y) => onChange({ y })} />
+      <AdvancedAdjust>
+        <SliderRow label="Horizontal" scope={scope} {...TEXT_POSITION_LIMITS.x} value={config.x} onChange={(x) => onChange({ x })} />
+        <SliderRow label="Vertical" scope={scope} {...TEXT_POSITION_LIMITS.y} value={config.y} onChange={(y) => onChange({ y })} />
+      </AdvancedAdjust>
     </section>
   )
 }
